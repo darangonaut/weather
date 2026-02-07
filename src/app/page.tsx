@@ -5,7 +5,7 @@ import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.1.0-split-api
+// Version: 1.1.2-stable-geo-loading
 interface WeatherDay {
   maxTemp: number;
   minTemp: number;
@@ -41,26 +41,36 @@ export default function WeatherPage() {
   const [error, setError] = useState<string | null>(null);
   const [persona, setPersona] = useState<Persona>('cynic');
 
+  // Vynútená kontrola Service Workera
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.update();
+      });
+    }
+  }, []);
+
   const fetchWeather = async (lat: number, lon: number, forcePersona?: Persona) => {
     const activePersona = forcePersona || persona;
     const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
 
-    // 1. CACHE CHECK
+    // 1. CACHE CHECK (v10)
     if (!forcePersona) {
-      const cached = localStorage.getItem('weather_cache_v9'); 
+      const cached = localStorage.getItem('weather_cache_v10'); 
       if (cached) {
         const cacheData: CacheData = JSON.parse(cached);
         if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
           setWeather(cacheData.data);
           setLoading(false);
+          setIsGeneratingAI(false);
           return;
         }
       }
     }
 
-    // 2. WEATHER FETCH (Fast)
+    // 2. WEATHER FETCH
     if (!weather) setLoading(true);
-    setLoadingStatus('Skenujem oblohu...');
+    setLoadingStatus('Sťahujem dáta...');
     setError(null);
 
     try {
@@ -68,10 +78,11 @@ export default function WeatherPage() {
       const weatherData = await weatherRes.json();
       if (weatherData.error) throw new Error(weatherData.error);
 
+      // Okamžite zobrazíme meteo dáta
       setWeather(weatherData);
       setLoading(false);
       
-      // 3. AI COMMENTARY FETCH (Slow - async)
+      // 3. AI COMMENTARY FETCH (asynchrónne)
       setIsGeneratingAI(true);
       const aiRes = await fetch('/api/commentary', {
         method: 'POST',
@@ -93,7 +104,9 @@ export default function WeatherPage() {
       if (aiData.commentary) {
         const fullData = { ...weatherData, commentary: aiData.commentary };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v9', JSON.stringify({ lat, lon, timestamp: Date.now(), persona: activePersona, data: fullData }));
+        localStorage.setItem('weather_cache_v10', JSON.stringify({ 
+          lat, lon, timestamp: Date.now(), persona: activePersona, data: fullData 
+        }));
       }
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
@@ -107,12 +120,34 @@ export default function WeatherPage() {
     const saved = localStorage.getItem('last_persona') as Persona;
     let p = saved && PERSONAS[saved] ? saved : 'cynic';
     setPersona(p);
+
+    if (!navigator.geolocation) {
+      setError('Tvoj prehliadač nepodporuje zisťovanie polohy.');
+      setLoading(false);
+      return;
+    }
+
     setLoadingStatus('Hľadám polohu...');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, p),
-      () => { setError('Povoľte GPS.'); setLoading(false); },
-      { timeout: 10000 }
-    );
+    
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 8000,
+      maximumAge: 0
+    };
+
+    const handleSuccess = (pos: GeolocationPosition) => {
+      fetchWeather(pos.coords.latitude, pos.coords.longitude, p);
+    };
+
+    const handleError = (err: GeolocationPositionError) => {
+      let msg = 'Nepodarilo sa získať polohu.';
+      if (err.code === 1) msg = 'Povoľte prosím prístup k polohe v nastaveniach prehliadača.';
+      if (err.code === 3) msg = 'Zisťovanie polohy trvalo príliš dlho. Skús prosím refresh.';
+      setError(msg);
+      setLoading(false);
+    };
+
+    navigator.geolocation.getCurrentPosition(handleSuccess, handleError, geoOptions);
   }, []);
 
   const handlePersonaChange = (newPersona: Persona) => {
@@ -178,7 +213,6 @@ export default function WeatherPage() {
           <div className="flex-1 space-y-4 md:space-y-6 animate-in fade-in duration-700">
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-              {/* TERAZ */}
               <div className="col-span-2 row-span-1 md:row-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 md:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden flex flex-col justify-between min-h-[180px] md:min-h-none">
                 <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
                   {getWeatherIcon(weather.weatherCode, weather.isDay, "w-40 h-40")}
@@ -195,7 +229,6 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              {/* ZAJTRA */}
               <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Zajtra</span>
                 <div className="my-2">{getWeatherIcon(weather.tomorrow.weatherCode, true, "w-10 h-10")}</div>
@@ -205,7 +238,6 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              {/* POZAJTRA */}
               <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
                   {(() => {
@@ -221,7 +253,6 @@ export default function WeatherPage() {
               </div>
             </div>
 
-            {/* AI COMMENTARY */}
             <section className="bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden group">
               <div className="absolute -right-8 -bottom-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
                 <User size={280} />
@@ -249,14 +280,14 @@ export default function WeatherPage() {
                     <div className="h-3 bg-slate-800/50 rounded-full w-2/3"></div>
                   </div>
                 ) : (
-                  <p className="text-lg md:text-2xl font-medium leading-relaxed md:leading-snug text-slate-200 italic animate-in fade-in duration-500">
+                  <p className="text-lg md:text-2xl font-medium leading-relaxed md:leading-snug text-slate-200 italic">
                     "{weather.commentary.trim()}"
                   </p>
                 )}
 
                 <footer className="flex items-center text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 pt-4">
                   <RefreshCw size={10} className={`mr-2 ${isGeneratingAI ? 'animate-spin text-blue-500' : ''}`} />
-                  {isGeneratingAI ? 'Pýtam sa Gemmy na názor...' : 'Systém v poriadku'}
+                  {isGeneratingAI ? 'Pýtam sa Gemmy...' : 'Systém v poriadku'}
                 </footer>
               </div>
             </section>
