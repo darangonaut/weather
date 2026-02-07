@@ -32,6 +32,7 @@ interface CacheData {
   data: WeatherResponse;
 }
 
+// Version: 1.0.1-ux-update-v2
 export default function WeatherPage() {
   const [weather, setWeather] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
