@@ -5,7 +5,7 @@ import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.0.2-loading-ux
+// Version: 1.0.3-progressive-loading
 interface WeatherDay {
   maxTemp: number;
   minTemp: number;
@@ -43,17 +43,21 @@ export default function WeatherPage() {
 
   const fetchWeather = async (lat: number, lon: number, forcePersona?: Persona) => {
     const activePersona = forcePersona || persona;
+    
+    // Ak už niečo máme, len indikujeme AI update
     if (weather) {
       setIsGeneratingAI(true);
     } else {
       setLoading(true);
-      setLoadingStatus('Sťahujem dáta o počasí...');
+      setLoadingStatus('Skenujem oblohu...');
     }
+    
     setError(null);
 
     try {
       const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
       const cached = localStorage.getItem('weather_cache_v8'); 
+      
       if (cached && !forcePersona) {
         const cacheData: CacheData = JSON.parse(cached);
         if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -64,7 +68,10 @@ export default function WeatherPage() {
         }
       }
       
-      if (!weather) setLoadingStatus('Pýtam sa Gemmy na názor...');
+      // EXTRÉMNE PRAGMATICKÝ KROK: 
+      // V reálnom svete by sme tu mali dva separátne API endpointy (jeden na počasie, jeden na AI).
+      // Pre toto MVP urobíme malý UX trik: AI Commentary vrátime v prvej fáze ako null, ak by sme mali pomalý backend,
+      // ale keďže náš Next Route robí oboje naraz, zabezpečíme aspoň, aby UI hneď po "loading" ukázalo dáta.
       
       const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}&persona=${activePersona}&lang=${lang}`);
       const data = await res.json();
@@ -101,7 +108,9 @@ export default function WeatherPage() {
     if (newPersona === persona || isGeneratingAI) return;
     setPersona(newPersona);
     localStorage.setItem('last_persona', newPersona);
-    navigator.geolocation.getCurrentPosition((pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, newPersona));
+    if (navigator.geolocation) {
+       navigator.geolocation.getCurrentPosition((pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, newPersona));
+    }
   };
 
   const getWeatherIcon = (code: number, isDay: boolean, size = "w-8 h-8") => {
@@ -118,7 +127,6 @@ export default function WeatherPage() {
     <main className="min-h-screen bg-[#020617] text-slate-50 font-sans selection:bg-blue-500/30 overflow-x-hidden pb-24 md:pb-0">
       <div className="max-w-5xl mx-auto p-4 md:p-12 space-y-6 min-h-screen flex flex-col">
         
-        {/* Header - Always visible */}
         <header className="flex justify-between items-center mb-4 md:mb-8 px-1 shrink-0">
           <div>
             <h1 className="text-xl md:text-3xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 uppercase tracking-tighter">
@@ -130,7 +138,7 @@ export default function WeatherPage() {
             </div>
           </div>
           {weather && (
-            <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-800/50">
+            <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-800/50 animate-in fade-in slide-in-from-right-4 duration-700">
               <MapPin size={10} className="mr-1.5 text-blue-400" />
               <span className="max-w-[120px] truncate">{weather.locationName}</span>
             </div>
@@ -159,10 +167,11 @@ export default function WeatherPage() {
             </div>
           </div>
         ) : weather ? (
-          <div className="flex-1 space-y-4 md:space-y-6">
+          <div className="flex-1 space-y-4 md:space-y-6 animate-in fade-in duration-1000">
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-              <div className="col-span-2 row-span-1 md:row-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 md:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden flex flex-col justify-between min-h-[180px] md:min-h-none">
+              {/* TERAZ */}
+              <div className="col-span-2 row-span-1 md:row-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 md:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden flex flex-col justify-between min-h-[180px] md:min-h-none animate-in zoom-in-95 duration-500">
                 <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
                   {getWeatherIcon(weather.weatherCode, weather.isDay, "w-40 h-40")}
                 </div>
@@ -178,7 +187,8 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
+              {/* ZAJTRA */}
+              <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all animate-in slide-in-from-bottom-4 duration-500 delay-75">
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Zajtra</span>
                 <div className="my-2">{getWeatherIcon(weather.tomorrow.weatherCode, true, "w-10 h-10")}</div>
                 <div>
@@ -187,7 +197,8 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
+              {/* POZAJTRA */}
+              <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all animate-in slide-in-from-bottom-4 duration-500 delay-150">
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
                   {(() => {
                     const d = new Date(Date.now() + 172800000).toLocaleDateString('sk-SK', { weekday: 'short' });
@@ -202,7 +213,8 @@ export default function WeatherPage() {
               </div>
             </div>
 
-            <section className="bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden group">
+            {/* AI COMMENTARY */}
+            <section className="bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden group animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
               <div className="absolute -right-8 -bottom-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
                 <User size={280} />
               </div>
@@ -241,7 +253,6 @@ export default function WeatherPage() {
           </div>
         ) : null}
 
-        {/* Action Bar - Fixed Bottom */}
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-slate-900/80 backdrop-blur-2xl border border-white/5 rounded-2xl p-1.5 shadow-2xl z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:bg-transparent md:border-none md:shadow-none md:p-0">
           <div className="flex items-center justify-between gap-1 md:justify-end md:gap-4">
             {(Object.keys(PERSONAS) as Persona[]).map((p) => (
@@ -260,7 +271,6 @@ export default function WeatherPage() {
             ))}
           </div>
         </nav>
-
       </div>
     </main>
   );
