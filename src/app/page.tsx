@@ -46,7 +46,7 @@ export default function WeatherPage() {
 
     try {
       const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-      const cached = localStorage.getItem('weather_cache_v5'); 
+      const cached = localStorage.getItem('weather_cache_v6'); 
       if (cached && !forcePersona) {
         const cacheData: CacheData = JSON.parse(cached);
         if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -60,7 +60,7 @@ export default function WeatherPage() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setWeather(data);
-      localStorage.setItem('weather_cache_v5', JSON.stringify({ lat, lon, timestamp: Date.now(), persona: activePersona, data }));
+      localStorage.setItem('weather_cache_v6', JSON.stringify({ lat, lon, timestamp: Date.now(), persona: activePersona, data }));
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
     } finally {
