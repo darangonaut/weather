@@ -7,7 +7,10 @@ const withPWA = withPWAInit({
   register: true,
   workboxOptions: {
     skipWaiting: true,
+    clientsClaim: true,
+    cleanupOutdatedCaches: true,
   },
+  reloadOnOnline: true,
 });
 
 const nextConfig: NextConfig = {
