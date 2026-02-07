@@ -5,7 +5,7 @@ import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.0.3-progressive-loading
+// Version: 1.1.0-split-api
 interface WeatherDay {
   maxTemp: number;
   minTemp: number;
@@ -18,7 +18,7 @@ interface WeatherResponse {
   weatherCode: number;
   isDay: boolean;
   description: string;
-  commentary: string;
+  commentary?: string;
   locationName: string;
   time: string;
   tomorrow: WeatherDay;
@@ -43,42 +43,58 @@ export default function WeatherPage() {
 
   const fetchWeather = async (lat: number, lon: number, forcePersona?: Persona) => {
     const activePersona = forcePersona || persona;
-    
-    // Ak už niečo máme, len indikujeme AI update
-    if (weather) {
-      setIsGeneratingAI(true);
-    } else {
-      setLoading(true);
-      setLoadingStatus('Skenujem oblohu...');
-    }
-    
-    setError(null);
+    const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
 
-    try {
-      const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-      const cached = localStorage.getItem('weather_cache_v8'); 
-      
-      if (cached && !forcePersona) {
+    // 1. CACHE CHECK
+    if (!forcePersona) {
+      const cached = localStorage.getItem('weather_cache_v9'); 
+      if (cached) {
         const cacheData: CacheData = JSON.parse(cached);
         if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
           setWeather(cacheData.data);
           setLoading(false);
-          setIsGeneratingAI(false);
           return;
         }
       }
+    }
+
+    // 2. WEATHER FETCH (Fast)
+    if (!weather) setLoading(true);
+    setLoadingStatus('Skenujem oblohu...');
+    setError(null);
+
+    try {
+      const weatherRes = await fetch(`/api/weather?lat=${lat}&lon=${lon}&lang=${lang}`);
+      const weatherData = await weatherRes.json();
+      if (weatherData.error) throw new Error(weatherData.error);
+
+      setWeather(weatherData);
+      setLoading(false);
       
-      // EXTRÉMNE PRAGMATICKÝ KROK: 
-      // V reálnom svete by sme tu mali dva separátne API endpointy (jeden na počasie, jeden na AI).
-      // Pre toto MVP urobíme malý UX trik: AI Commentary vrátime v prvej fáze ako null, ak by sme mali pomalý backend,
-      // ale keďže náš Next Route robí oboje naraz, zabezpečíme aspoň, aby UI hneď po "loading" ukázalo dáta.
+      // 3. AI COMMENTARY FETCH (Slow - async)
+      setIsGeneratingAI(true);
+      const aiRes = await fetch('/api/commentary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          persona: activePersona,
+          lang,
+          weatherData: {
+            temperature: weatherData.temperature,
+            description: weatherData.description,
+            isDay: weatherData.isDay,
+            tomorrow: weatherData.tomorrow,
+            afterTomorrow: weatherData.afterTomorrow
+          }
+        })
+      });
       
-      const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}&persona=${activePersona}&lang=${lang}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      
-      setWeather(data);
-      localStorage.setItem('weather_cache_v8', JSON.stringify({ lat, lon, timestamp: Date.now(), persona: activePersona, data }));
+      const aiData = await aiRes.json();
+      if (aiData.commentary) {
+        const fullData = { ...weatherData, commentary: aiData.commentary };
+        setWeather(fullData);
+        localStorage.setItem('weather_cache_v9', JSON.stringify({ lat, lon, timestamp: Date.now(), persona: activePersona, data: fullData }));
+      }
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
     } finally {
@@ -91,15 +107,10 @@ export default function WeatherPage() {
     const saved = localStorage.getItem('last_persona') as Persona;
     let p = saved && PERSONAS[saved] ? saved : 'cynic';
     setPersona(p);
-    
-    setLoadingStatus('Hľadám tvoju polohu...');
-    
+    setLoadingStatus('Hľadám polohu...');
     navigator.geolocation.getCurrentPosition(
       (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, p),
-      () => { 
-        setError('Povoľte polohu v nastaveniach prehliadača.'); 
-        setLoading(false); 
-      },
+      () => { setError('Povoľte GPS.'); setLoading(false); },
       { timeout: 10000 }
     );
   }, []);
@@ -138,7 +149,7 @@ export default function WeatherPage() {
             </div>
           </div>
           {weather && (
-            <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-800/50 animate-in fade-in slide-in-from-right-4 duration-700">
+            <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-800/50">
               <MapPin size={10} className="mr-1.5 text-blue-400" />
               <span className="max-w-[120px] truncate">{weather.locationName}</span>
             </div>
@@ -153,10 +164,7 @@ export default function WeatherPage() {
                 <Loader2 size={48} className="text-blue-400 animate-spin" />
               </div>
             </div>
-            <div className="text-center space-y-2">
-              <p className="text-lg font-medium text-slate-200 animate-pulse italic">{loadingStatus}</p>
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">Pripravujem tvoj bento box...</p>
-            </div>
+            <p className="text-lg font-medium text-slate-200 animate-pulse italic">{loadingStatus}</p>
           </div>
         ) : error ? (
           <div className="flex-1 flex flex-col items-center justify-center">
@@ -167,11 +175,11 @@ export default function WeatherPage() {
             </div>
           </div>
         ) : weather ? (
-          <div className="flex-1 space-y-4 md:space-y-6 animate-in fade-in duration-1000">
+          <div className="flex-1 space-y-4 md:space-y-6 animate-in fade-in duration-700">
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
               {/* TERAZ */}
-              <div className="col-span-2 row-span-1 md:row-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 md:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden flex flex-col justify-between min-h-[180px] md:min-h-none animate-in zoom-in-95 duration-500">
+              <div className="col-span-2 row-span-1 md:row-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 md:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden flex flex-col justify-between min-h-[180px] md:min-h-none">
                 <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
                   {getWeatherIcon(weather.weatherCode, weather.isDay, "w-40 h-40")}
                 </div>
@@ -188,7 +196,7 @@ export default function WeatherPage() {
               </div>
 
               {/* ZAJTRA */}
-              <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all animate-in slide-in-from-bottom-4 duration-500 delay-75">
+              <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Zajtra</span>
                 <div className="my-2">{getWeatherIcon(weather.tomorrow.weatherCode, true, "w-10 h-10")}</div>
                 <div>
@@ -198,7 +206,7 @@ export default function WeatherPage() {
               </div>
 
               {/* POZAJTRA */}
-              <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all animate-in slide-in-from-bottom-4 duration-500 delay-150">
+              <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
                   {(() => {
                     const d = new Date(Date.now() + 172800000).toLocaleDateString('sk-SK', { weekday: 'short' });
@@ -214,7 +222,7 @@ export default function WeatherPage() {
             </div>
 
             {/* AI COMMENTARY */}
-            <section className="bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden group animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
+            <section className="bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden group">
               <div className="absolute -right-8 -bottom-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
                 <User size={280} />
               </div>
@@ -227,26 +235,28 @@ export default function WeatherPage() {
                     </div>
                     <div>
                       <div className="text-[10px] font-black uppercase tracking-widest text-blue-400">{PERSONAS[persona].name}</div>
-                      <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter">Aktualizované o {new Date(weather.time).toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' })}</div>
+                      <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter">
+                        {isGeneratingAI ? 'Gemma píše...' : `Aktualizované o ${new Date(weather.time).toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' })}`}
+                      </div>
                     </div>
                   </div>
                 </header>
 
-                {isGeneratingAI ? (
+                {isGeneratingAI || !weather.commentary ? (
                   <div className="space-y-3 py-2 animate-pulse">
                     <div className="h-3 bg-slate-800/50 rounded-full w-full"></div>
                     <div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div>
                     <div className="h-3 bg-slate-800/50 rounded-full w-2/3"></div>
                   </div>
                 ) : (
-                  <p className="text-lg md:text-2xl font-medium leading-relaxed md:leading-snug text-slate-200 italic">
+                  <p className="text-lg md:text-2xl font-medium leading-relaxed md:leading-snug text-slate-200 italic animate-in fade-in duration-500">
                     "{weather.commentary.trim()}"
                   </p>
                 )}
 
                 <footer className="flex items-center text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 pt-4">
                   <RefreshCw size={10} className={`mr-2 ${isGeneratingAI ? 'animate-spin text-blue-500' : ''}`} />
-                  {isGeneratingAI ? 'Generujem odpoveď...' : 'Systém v poriadku'}
+                  {isGeneratingAI ? 'Pýtam sa Gemmy na názor...' : 'Systém v poriadku'}
                 </footer>
               </div>
             </section>
@@ -259,7 +269,7 @@ export default function WeatherPage() {
               <button
                 key={p}
                 onClick={() => handlePersonaChange(p)}
-                disabled={loading || isGeneratingAI}
+                disabled={isGeneratingAI}
                 className={`flex-1 md:flex-none px-4 py-3 md:py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-300 ${
                   persona === p 
                     ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)] scale-[1.02]' 
