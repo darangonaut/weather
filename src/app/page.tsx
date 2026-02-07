@@ -39,6 +39,15 @@ export default function WeatherPage() {
   const [error, setError] = useState<string | null>(null);
   const [persona, setPersona] = useState<Persona>('cynic');
 
+  // AGRESÍVNY UPDATE SERVICE WORKERA
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.update();
+      });
+    }
+  }, []);
+
   const fetchWeather = async (lat: number, lon: number, forcePersona?: Persona) => {
     const activePersona = forcePersona || persona;
     if (weather) setIsGeneratingAI(true); else setLoading(true);
@@ -46,7 +55,8 @@ export default function WeatherPage() {
 
     try {
       const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-      const cached = localStorage.getItem('weather_cache_v6'); 
+      // V7 pre vynútenie nového layoutu
+      const cached = localStorage.getItem('weather_cache_v7'); 
       if (cached && !forcePersona) {
         const cacheData: CacheData = JSON.parse(cached);
         if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -60,7 +70,7 @@ export default function WeatherPage() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setWeather(data);
-      localStorage.setItem('weather_cache_v6', JSON.stringify({ lat, lon, timestamp: Date.now(), persona: activePersona, data }));
+      localStorage.setItem('weather_cache_v7', JSON.stringify({ lat, lon, timestamp: Date.now(), persona: activePersona, data }));
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
     } finally {
@@ -100,11 +110,10 @@ export default function WeatherPage() {
     <main className="min-h-screen bg-[#020617] text-slate-50 font-sans selection:bg-blue-500/30 overflow-x-hidden pb-24 md:pb-0">
       <div className="max-w-5xl mx-auto p-4 md:p-12 space-y-6">
         
-        {/* Header - UX: Hierarchicky čisté */}
         <header className="flex justify-between items-center mb-4 md:mb-8 px-1">
           <div>
             <h1 className="text-xl md:text-3xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 uppercase tracking-tighter">
-              Weather AI
+              Weather AI ✨
             </h1>
             <div className="flex items-center gap-1.5 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
@@ -133,11 +142,7 @@ export default function WeatherPage() {
           </div>
         ) : weather ? (
           <div className="space-y-4 md:space-y-6">
-            
-            {/* UX: Asymetrický Bento Grid pre lepšiu hierarchiu */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-              
-              {/* TERAZ - Dominantný box */}
               <div className="col-span-2 row-span-1 md:row-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 md:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden flex flex-col justify-between min-h-[180px] md:min-h-none">
                 <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
                   {getWeatherIcon(weather.weatherCode, weather.isDay, "w-40 h-40")}
@@ -154,7 +159,6 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              {/* ZAJTRA */}
               <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Zajtra</span>
                 <div className="my-2">{getWeatherIcon(weather.tomorrow.weatherCode, true, "w-10 h-10")}</div>
@@ -164,7 +168,6 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              {/* POZAJTRA */}
               <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all">
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
                   {(() => {
@@ -180,7 +183,6 @@ export default function WeatherPage() {
               </div>
             </div>
 
-            {/* AI COMMENTARY - UX: Čitateľnosť a priestor */}
             <section className="bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden group">
               <div className="absolute -right-8 -bottom-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
                 <User size={280} />
@@ -220,7 +222,6 @@ export default function WeatherPage() {
           </div>
         ) : null}
 
-        {/* UX: Pevné spodné menu pre palec na mobile */}
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-slate-900/80 backdrop-blur-2xl border border-white/5 rounded-2xl p-1.5 shadow-2xl z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:bg-transparent md:border-none md:shadow-none md:p-0">
           <div className="flex items-center justify-between gap-1 md:justify-end md:gap-4">
             {(Object.keys(PERSONAS) as Persona[]).map((p) => (
@@ -240,7 +241,6 @@ export default function WeatherPage() {
           </div>
         </nav>
 
-        {/* Desktop Footer */}
         <footer className="hidden md:flex justify-between items-center text-slate-700 text-[9px] font-black uppercase tracking-[0.4em] pt-8 border-t border-slate-900">
            <p>© 2026 Weather AI • {weather?.locationName}</p>
            <div className="flex gap-8">
@@ -248,7 +248,6 @@ export default function WeatherPage() {
               <span>Open-Meteo API</span>
            </div>
         </footer>
-
       </div>
     </main>
   );
