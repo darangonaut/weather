@@ -10,6 +10,7 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  turbopack: {}, // Silence the warning/error and allow fallback to Webpack
 };
 
 export default withPWA(nextConfig);
