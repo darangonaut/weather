@@ -183,9 +183,14 @@ export default function WeatherPage() {
         {/* Header */}
         <header className="flex justify-between items-start mb-1 px-1 pt-2">
           <div className="flex flex-col gap-0.5">
-            <h1 className="text-xl md:text-2xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 uppercase tracking-tighter leading-none">
-              Weather AI ✨
-            </h1>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-[#020617] rounded-lg flex items-center justify-center shadow-lg overflow-hidden border border-white/10 shrink-0">
+                <img src="/icon-192x192.png" alt="Logo" className="w-full h-full object-cover" />
+              </div>
+              <h1 className="text-xl md:text-2xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 uppercase tracking-tighter leading-none">
+                Weather AI
+              </h1>
+            </div>
             {weather && (
               <div className="flex items-center text-slate-400 text-sm md:text-xl font-bold tracking-tight">
                 <MapPin size={14} className="mr-1 text-blue-400 shrink-0" />
