@@ -17,8 +17,7 @@ export const PERSONAS: Record<Persona, { name: string; instruction: string }> = 
   }
 };
 
-export async function generateWeatherCommentary(
-  persona: Persona,
+export async function generateAllWeatherCommentaries(
   weatherData: { 
     temperature: number; 
     description: string; 
@@ -29,36 +28,44 @@ export async function generateWeatherCommentary(
   lang: string = 'sk'
 ) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('Chýba GEMINI_API_KEY v premenných prostredia');
-  }
+  if (!apiKey) throw new Error('Chýba GEMINI_API_KEY');
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ 
     model: "gemma-3-27b-it",
+    generationConfig: { responseMimeType: "application/json" }
   });
 
-  const personaInstruction = PERSONAS[persona].instruction;
-  
   const prompt = `
-    ${personaInstruction}
-    STRIKTNÉ PRAVIDLO: Tvoja odpoveď musí byť v jazyku "${lang}" a mať maximálne 400 znakov.
+    Vži sa do troch rôznych osobností a napíš vtipný komentár k aktuálnemu počasiu a výhľadu.
     
+    JAZYK: "${lang}"
     KONTEXT:
     Aktuálne: ${weatherData.description}, ${weatherData.temperature}°C.
     Zajtra: ${weatherData.tomorrow?.description}, do ${weatherData.tomorrow?.maxTemp}°C.
     Pozajtra: ${weatherData.afterTomorrow?.description}.
     
-    ÚLOHA:
-    Napíš vtipný a charakteristický komentár k dnešku a stručný výhľad na ďalšie dni.
+    OSOBNOSTI:
+    1. cynic: ${PERSONAS.cynic.instruction}
+    2. theory: ${PERSONAS.theory.instruction}
+    3. coach: ${PERSONAS.coach.instruction}
+    
+    STRIKTNÉ PRAVIDLO: Vráť LEN čistý JSON v tomto formáte:
+    {
+      "cynic": "text...",
+      "theory": "text...",
+      "coach": "text..."
+    }
+    Každý text musí mať maximálne 400 znakov.
   `;
 
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text();
+    const text = response.text();
+    return JSON.parse(text);
   } catch (error: any) {
-    console.error("Gemma Error Details:", error);
+    console.error("Gemma JSON Error:", error);
     throw error;
   }
 }

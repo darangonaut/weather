@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateWeatherCommentary, Persona } from '@/lib/gemini';
+import { generateAllWeatherCommentaries } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { persona, weatherData, lang } = body;
+    const { weatherData, lang } = body;
 
-    const commentary = await generateWeatherCommentary(persona as Persona, weatherData, lang);
+    const commentaries = await generateAllWeatherCommentaries(weatherData, lang);
 
-    return NextResponse.json({ commentary });
+    return NextResponse.json({ commentaries });
   } catch (error: any) {
     console.error('Commentary API Error:', error);
     return NextResponse.json({ error: error.message || 'AI error' }, { status: 500 });
