@@ -5,7 +5,7 @@ import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.2.0-all-personas-json
+// Version: 1.3.0-wide-bento
 interface WeatherDay {
   maxTemp: number;
   minTemp: number;
@@ -42,9 +42,8 @@ export default function WeatherPage() {
 
   const fetchWeather = async (lat: number, lon: number) => {
     const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-
-    // 1. CACHE CHECK
-    const cached = localStorage.getItem('weather_cache_v11'); 
+    const cached = localStorage.getItem('weather_cache_v13'); 
+    
     if (cached) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -83,14 +82,10 @@ export default function WeatherPage() {
       });
       
       const aiData = await aiRes.json();
-      console.log("AI Data received:", aiData);
-
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v12', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
-      } else if (aiData.error) {
-        throw new Error(aiData.error);
+        localStorage.setItem('weather_cache_v13', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
@@ -104,16 +99,9 @@ export default function WeatherPage() {
     const saved = localStorage.getItem('last_persona') as Persona;
     if (saved && PERSONAS[saved]) setPersona(saved);
 
-    if (!navigator.geolocation) {
-      setError('GPS nie je podporované.');
-      setLoading(false);
-      return;
-    }
-
-    setLoadingStatus('Hľadám polohu...');
     navigator.geolocation.getCurrentPosition(
       (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-      () => { setError('Povoľte GPS.'); setLoading(false); },
+      () => { setError('Povoľte GPS v nastaveniach.'); setLoading(false); },
       { timeout: 8000 }
     );
   }, []);
@@ -137,13 +125,13 @@ export default function WeatherPage() {
     <main className="min-h-screen bg-[#020617] text-slate-50 font-sans selection:bg-blue-500/30 overflow-x-hidden pb-24 md:pb-0">
       <div className="max-w-5xl mx-auto p-4 md:p-12 space-y-6 min-h-screen flex flex-col">
         
-        <header className="flex justify-between items-center mb-4 md:mb-8 px-1 shrink-0">
+        <header className="flex justify-between items-center mb-2 md:mb-6 px-1 shrink-0">
           <div>
             <h1 className="text-xl md:text-3xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 uppercase tracking-tighter">
               Weather AI ✨
             </h1>
             <div className="flex items-center gap-1.5 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
               Gemma 3 27B
             </div>
           </div>
@@ -172,52 +160,72 @@ export default function WeatherPage() {
           </div>
         ) : weather ? (
           <div className="flex-1 space-y-4 md:space-y-6 animate-in fade-in duration-700">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-              {/* TERAZ */}
-              <div className="col-span-2 row-span-1 md:row-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 md:p-10 shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[180px] md:min-h-none">
-                <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
-                  {getWeatherIcon(weather.weatherCode, weather.isDay, "w-40 h-40")}
+            
+            <div className="grid grid-cols-4 gap-3 md:gap-6">
+              
+              {/* TERAZ - Široký riadok */}
+              <div className="col-span-4 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 md:p-8 shadow-2xl relative overflow-hidden flex items-center justify-between min-h-[140px]">
+                <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                  {getWeatherIcon(weather.weatherCode, weather.isDay, "w-48 h-48")}
                 </div>
-                <div className="relative z-10">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Aktuálne</span>
-                  <div className="text-6xl md:text-8xl font-black tracking-tighter mt-2">{Math.round(weather.temperature)}°</div>
-                </div>
-                <div className="relative z-10 flex items-center gap-2 uppercase font-black text-[10px] tracking-widest">
-                  <div className="bg-white/10 backdrop-blur-md p-2 rounded-xl">
-                    {getWeatherIcon(weather.weatherCode, weather.isDay, "w-6 h-6")}
+                
+                <div className="flex items-center gap-6 relative z-10">
+                  <div className="bg-white/10 backdrop-blur-xl p-4 rounded-3xl shadow-inner">
+                    {getWeatherIcon(weather.weatherCode, weather.isDay, "w-12 h-12 md:w-16 h-16")}
                   </div>
-                  {weather.description}
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Aktuálne</span>
+                    <h2 className="text-xs md:text-sm font-bold uppercase tracking-widest block">{weather.description}</h2>
+                  </div>
+                </div>
+
+                <div className="text-6xl md:text-8xl font-black tracking-tighter relative z-10">
+                  {Math.round(weather.temperature)}°
                 </div>
               </div>
 
-              {/* ZAJTRA */}
-              <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between">
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Zajtra</span>
-                <div className="my-2">{getWeatherIcon(weather.tomorrow.weatherCode, true, "w-10 h-10")}</div>
-                <div>
-                  <div className="text-2xl md:text-3xl font-black">{Math.round(weather.tomorrow.maxTemp)}°</div>
-                  <div className="text-[9px] font-bold text-slate-500 uppercase">{weather.tomorrow.description}</div>
+              {/* ZAJTRA - Polovičná šírka, horizontálne */}
+              <div className="col-span-4 md:col-span-2 bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-6 flex items-center justify-between group hover:border-slate-700 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="bg-slate-800/50 p-3 rounded-2xl">
+                    {getWeatherIcon(weather.tomorrow.weatherCode, true, "w-10 h-10")}
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Zajtra</span>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase truncate max-w-[120px]">{weather.tomorrow.description}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-black leading-none">{Math.round(weather.tomorrow.maxTemp)}°</div>
+                  <div className="text-[10px] font-bold text-slate-600 mt-1">{Math.round(weather.tomorrow.minTemp)}°</div>
                 </div>
               </div>
 
-              {/* POZAJTRA */}
-              <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between">
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
-                  {(() => {
-                    const d = new Date(Date.now() + 172800000).toLocaleDateString('sk-SK', { weekday: 'short' });
-                    return d.charAt(0).toUpperCase() + d.slice(1);
-                  })()}
-                </span>
-                <div className="my-2">{getWeatherIcon(weather.afterTomorrow.weatherCode, true, "w-10 h-10")}</div>
-                <div>
-                  <div className="text-2xl md:text-3xl font-black">{Math.round(weather.afterTomorrow.maxTemp)}°</div>
-                  <div className="text-[9px] font-bold text-slate-500 uppercase">{weather.afterTomorrow.description}</div>
+              {/* POZAJTRA - Polovičná šírka, horizontálne */}
+              <div className="col-span-4 md:col-span-2 bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-6 flex items-center justify-between group hover:border-slate-700 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="bg-slate-800/50 p-3 rounded-2xl">
+                    {getWeatherIcon(weather.afterTomorrow.weatherCode, true, "w-10 h-10")}
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
+                      {(() => {
+                        const d = new Date(Date.now() + 172800000).toLocaleDateString('sk-SK', { weekday: 'long' });
+                        return d.charAt(0).toUpperCase() + d.slice(1);
+                      })()}
+                    </span>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase truncate max-w-[120px]">{weather.afterTomorrow.description}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-black leading-none">{Math.round(weather.afterTomorrow.maxTemp)}°</div>
+                  <div className="text-[10px] font-bold text-slate-600 mt-1">{Math.round(weather.afterTomorrow.minTemp)}°</div>
                 </div>
               </div>
             </div>
 
             {/* AI COMMENTARY */}
-            <section className="bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden">
+            <section className="bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden flex-1">
               <div className="absolute -right-8 -bottom-8 opacity-[0.03]">
                 <User size={280} />
               </div>
@@ -230,8 +238,8 @@ export default function WeatherPage() {
                     </div>
                     <div>
                       <div className="text-[10px] font-black uppercase tracking-widest text-blue-400">{PERSONAS[persona].name}</div>
-                      <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter italic">
-                        {isGeneratingAI && !weather.commentaries ? 'Gemma píše všetky verzie...' : 'Ready'}
+                      <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter">
+                        {isGeneratingAI && !weather.commentaries ? 'Gemma analyzuje...' : 'Ready'}
                       </div>
                     </div>
                   </div>
@@ -241,18 +249,12 @@ export default function WeatherPage() {
                   <div className="space-y-3 py-2 animate-pulse">
                     <div className="h-3 bg-slate-800/50 rounded-full w-full"></div>
                     <div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div>
-                    <div className="h-3 bg-slate-800/50 rounded-full w-2/3"></div>
                   </div>
                 ) : weather.commentaries ? (
-                  <p className="text-lg md:text-2xl font-medium leading-relaxed md:leading-snug text-slate-200 italic animate-in fade-in duration-300">
+                  <p className="text-lg md:text-2xl font-medium leading-relaxed text-slate-200 italic animate-in fade-in duration-300">
                     "{weather.commentaries[persona]?.trim()}"
                   </p>
                 ) : null}
-
-                <footer className="flex items-center text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 pt-4">
-                  <RefreshCw size={10} className={`mr-2 ${isGeneratingAI ? 'animate-spin text-blue-500' : ''}`} />
-                  {isGeneratingAI ? 'Načítavam AI...' : 'Okamžité prepínanie aktívne'}
-                </footer>
               </div>
             </section>
           </div>
@@ -266,7 +268,7 @@ export default function WeatherPage() {
                 onClick={() => handlePersonaChange(p)}
                 className={`flex-1 md:flex-none px-4 py-3 md:py-2.5 rounded-xl text-[10px] font-black uppercase transition-all duration-200 ${
                   persona === p 
-                    ? 'bg-blue-600 text-white shadow-lg scale-[1.02]' 
+                    ? 'bg-blue-600 text-white shadow-lg' 
                     : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
