@@ -2,7 +2,7 @@
   "name": "Weather AI",
   "short_name": "Weather AI",
   "description": "Vtipné počasie s AI charakterom",
-  "start_url": "/weather",
+  "start_url": "/weather?mode=pwa",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#020617",
