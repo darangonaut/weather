@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌦️ Weather AI – Počasie s (pochybným) charakterom
 
-## Getting Started
+**Prečo by mala byť predpoveď počasia nudná?** 
+Zastavili sme sa v roku 2026 a zistili sme, že suché čísla nikoho nebavia. Tak sme zobrali najnovšiu **Gemmu 3 27B** a dali sme jej za úlohu komentovať to, čo sa deje vonku. Výsledok? Aplikácia, ktorá ti povie pravdu, aj keď bolí.
 
-First, run the development server:
+✨ **[Vyskúšaj naživo tu!](https://weather-alpha-woad.vercel.app/)**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🎭 Spoznaj svoje Weather Persony
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+V spodnom menu si môžeš prepínať medzi štyrmi "expertmi", ktorí vidia svet (a oblaky) úplne inak:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+*   **🖕 Cynik:** Neznáša rána, neznáša ľudí a tvoje plány na víkend sú mu ukradnuté. Priprav sa na poriadnu dávku čierneho humoru.
+*   **🛸 Konšpirátor:** HAARP, chemtrails a vládne experimenty. Ten dážď nie je voda, je to snaha o ovládnutie tvojej mysle! (Alobalovú čiapku si dokúp sám).
+*   **💪 Tréner:** Žiadne výhovorky! Prší? Ideálny čas na angličáky v blate. Mrzne? Buduješ si charakter, ty padavka!
+*   **🌈 Optimista:** *Toxicky* pozitívny človek. Aj keď vonku padajú traktory, on v tom vidí príležitosť na tancovanie v kalužiach a "osvieženie duše".
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Čo je pod kapotou? (Pre zvedavcov)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Žiadny over-engineering, len čistý a pragmatický kód:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+*   **Next.js 16:** Srdce a pľúca aplikácie.
+*   **Gemma 3 27B (via Google AI Studio):** Mozog, ktorý generuje tie šialené hlášky.
+*   **Open-Meteo API:** Odkiaľ ťaháme tie reálne dáta (keď ich AI práve nefalšuje).
+*   **Tailwind CSS:** Aby tie Bento boxy vyzerali luxusne aj na tvojom MacBooku.
+*   **PWA:** Nainštaluj si to na plochu a tvár sa, že je to natívna appka.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🚀 Ako si to rozbehať u seba?
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1.  Klonuj toto repo.
+2.  Vytvor si `.env.local` a vlož tam svoj `GEMINI_API_KEY`.
+3.  `npm install`
+4.  `npm run dev`
+5.  Priprav sa na to, že ti appka vynadá do "bledých tvárí".
+
+---
+
+**Postavené s láskou, kávou a miernym odporom k rannému vstávaniu. ☕️💻**
