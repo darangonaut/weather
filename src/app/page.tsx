@@ -59,7 +59,6 @@ export default function WeatherPage() {
     setError(null);
 
     try {
-      // 2. WEATHER FETCH
       const weatherRes = await fetch(`/api/weather?lat=${lat}&lon=${lon}&lang=${lang}`);
       const weatherData = await weatherRes.json();
       if (weatherData.error) throw new Error(weatherData.error);
@@ -67,7 +66,6 @@ export default function WeatherPage() {
       setWeather(weatherData);
       setLoading(false);
       
-      // 3. ALL PERSONAS AI FETCH
       setIsGeneratingAI(true);
       const aiRes = await fetch('/api/commentary', {
         method: 'POST',
@@ -85,10 +83,14 @@ export default function WeatherPage() {
       });
       
       const aiData = await aiRes.json();
+      console.log("AI Data received:", aiData);
+
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v11', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v12', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+      } else if (aiData.error) {
+        throw new Error(aiData.error);
       }
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');

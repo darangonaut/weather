@@ -33,6 +33,7 @@ export async function generateAllWeatherCommentaries(
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ 
     model: "gemma-3-27b-it",
+    // Skúsime JSON mód, ale budeme pripravení na surový text
     generationConfig: { responseMimeType: "application/json" }
   });
 
@@ -62,10 +63,19 @@ export async function generateAllWeatherCommentaries(
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
-    return JSON.parse(text);
+    let text = response.text();
+    
+    // Odstránenie prípadných markdown značiek (Gemma to niekedy robí aj pri JSON móde)
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      console.error("JSON parse failed, raw text:", text);
+      throw new Error("AI vrátilo neplatný formát dát.");
+    }
   } catch (error: any) {
-    console.error("Gemma JSON Error:", error);
+    console.error("Gemma Execution Error:", error);
     throw error;
   }
 }
