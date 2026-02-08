@@ -20,8 +20,12 @@ export const PERSONAS: Record<Persona, { name: string; instruction: string }> = 
 export async function generateAllWeatherCommentaries(
   weatherData: { 
     temperature: number; 
+    apparentTemperature: number;
+    humidity: number;
+    windSpeed: number;
     description: string; 
     isDay: boolean;
+    timeline: Array<{ label: string; temperature: number }>;
     tomorrow?: { maxTemp: number; minTemp: number; description: string };
     afterTomorrow?: { maxTemp: number; minTemp: number; description: string };
   },
@@ -50,7 +54,7 @@ export async function generateAllWeatherCommentaries(
     2. theory: ${PERSONAS.theory.instruction}
     3. coach: ${PERSONAS.coach.instruction}
     
-    STRIKTNÉ PRAVIDLÁ: 
+    STRIKTNÉ PRAVIDLO: 
     - Vráť LEN čistý JSON bez markdown značiek.
     - Formát: {"cynic": "...", "theory": "...", "coach": "..."}
     - Každý text musí mať dĺžku približne 5-7 viet a maximálne 500 znakov.
