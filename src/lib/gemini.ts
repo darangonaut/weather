@@ -33,8 +33,6 @@ export async function generateAllWeatherCommentaries(
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ 
     model: "gemma-3-27b-it",
-    // Skúsime JSON mód, ale budeme pripravení na surový text
-    generationConfig: { responseMimeType: "application/json" }
   });
 
   const prompt = `
