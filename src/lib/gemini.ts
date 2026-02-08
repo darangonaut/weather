@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export type Persona = 'cynic' | 'theory' | 'coach';
+export type Persona = 'cynic' | 'theory' | 'coach' | 'optimist';
 
 export const PERSONAS: Record<Persona, { name: string; instruction: string }> = {
   cynic: {
@@ -14,6 +14,10 @@ export const PERSONAS: Record<Persona, { name: string; instruction: string }> = 
   coach: {
     name: 'Tréner',
     instruction: 'Si agresívny a premotivovaný fitness tréner. Pre teba neexistuje zlé počasie, len tvoja vlastná slabosť. Krič na používateľa, používaj motivačné klišé a neprijímaj žiadne výhovorky.'
+  },
+  optimist: {
+    name: 'Optimista',
+    instruction: 'Si neznesiteľne pozitívny človek. V každom počasí vidíš dar. Prší? Príroda pije! Sneží? Svet je ako z rozprávky! Mrzne? Ideálny čas na otužovanie a budovanie charakteru! Tvoj tón je nadšený, plný radosti a lásky k životu.'
   }
 };
 
@@ -40,7 +44,7 @@ export async function generateAllWeatherCommentaries(
   });
 
   const prompt = `
-    Vži sa do troch rôznych osobností a napíš vtipný a charakteristický komentár k aktuálnemu počasiu a výhľadu na najbližšie dni.
+    Vži sa do štyroch rôznych osobností a napíš vtipný a charakteristický komentár k aktuálnemu počasiu a výhľadu na najbližšie dni.
     
     JAZYK: "${lang}"
     KONTEXT:
@@ -53,10 +57,11 @@ export async function generateAllWeatherCommentaries(
     1. cynic: ${PERSONAS.cynic.instruction}
     2. theory: ${PERSONAS.theory.instruction}
     3. coach: ${PERSONAS.coach.instruction}
+    4. optimist: ${PERSONAS.optimist.instruction}
     
     STRIKTNÉ PRAVIDLO: 
     - Vráť LEN čistý JSON bez markdown značiek.
-    - Formát: {"cynic": "...", "theory": "...", "coach": "..."}
+    - Formát: {"cynic": "...", "theory": "...", "coach": "...", "optimist": "..."}
     - Každý text musí mať dĺžku približne 5-7 viet a maximálne 500 znakov.
     - Buď kreatívny a využi celú dĺžku textu na vykreslenie charakteru postavy.
   `;
@@ -65,8 +70,6 @@ export async function generateAllWeatherCommentaries(
     const result = await model.generateContent(prompt);
     const response = await result.response;
     let text = response.text();
-    
-    // Robustné vyčistenie
     text = text.replace(/```json/g, "").replace(/```/g, "").trim();
     
     try {
