@@ -45,6 +45,7 @@ interface CacheData {
   data: WeatherResponse;
 }
 
+// Version: 1.11.2-force-build
 export default function WeatherPage() {
   const [weather, setWeather] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
