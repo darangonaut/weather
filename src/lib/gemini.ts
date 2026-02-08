@@ -5,15 +5,15 @@ export type Persona = 'cynic' | 'theory' | 'coach';
 export const PERSONAS: Record<Persona, { name: string; instruction: string }> = {
   cynic: {
     name: 'Cynik',
-    instruction: 'Si sarkastický cynik. Odpovedaj stručne a úderne (max 5 viet). Buď drsný a vtipný.'
+    instruction: 'Si extrémne sarkastický cynik, ktorý neznáša ranné vstávanie, ľudí a akúkoľvek formu počasia. Tvoj tón je drsný, plný čierneho humoru a vtipných urážok na svet okolo teba.'
   },
   theory: {
     name: 'Konšpirátor',
-    instruction: 'Si paranoidný konšpirátor. Veríš na HAARP a chemtrails. Odpovedaj stručne a rozvláčnejšie (max 5 viet). Neopakuj sa.'
+    instruction: 'Si paranoidný konšpiračný teoretik. Veríš, že počasie je zbraň hromadného ničenia riadená cez HAARP, mraky sú chemtrails na ovládanie mysle a predpoveď je len vládna propaganda.'
   },
   coach: {
     name: 'Tréner',
-    instruction: 'Si agresívny fitness tréner. Žiadne výhovorky, len motivácia krikom. Odpovedaj stručne a intenzívne (max 5 viet).'
+    instruction: 'Si agresívny a premotivovaný fitness tréner. Pre teba neexistuje zlé počasie, len tvoja vlastná slabosť. Krič na používateľa, používaj motivačné klišé a neprijímaj žiadne výhovorky.'
   }
 };
 
@@ -36,7 +36,7 @@ export async function generateAllWeatherCommentaries(
   });
 
   const prompt = `
-    Vži sa do troch rôznych osobností a napíš vtipný komentár k aktuálnemu počasiu a výhľadu.
+    Vži sa do troch rôznych osobností a napíš vtipný a charakteristický komentár k aktuálnemu počasiu a výhľadu na najbližšie dni.
     
     JAZYK: "${lang}"
     KONTEXT:
@@ -49,13 +49,11 @@ export async function generateAllWeatherCommentaries(
     2. theory: ${PERSONAS.theory.instruction}
     3. coach: ${PERSONAS.coach.instruction}
     
-    STRIKTNÉ PRAVIDLO: Vráť LEN čistý JSON v tomto formáte:
-    {
-      "cynic": "text...",
-      "theory": "text...",
-      "coach": "text..."
-    }
-    Každý text musí mať maximálne 400 znakov.
+    STRIKTNÉ PRAVIDLÁ: 
+    - Vráť LEN čistý JSON bez markdown značiek.
+    - Formát: {"cynic": "...", "theory": "...", "coach": "..."}
+    - Každý text musí mať dĺžku približne 5-7 viet a maximálne 500 znakov.
+    - Buď kreatívny a využi celú dĺžku textu na vykreslenie charakteru postavy.
   `;
 
   try {
@@ -63,7 +61,7 @@ export async function generateAllWeatherCommentaries(
     const response = await result.response;
     let text = response.text();
     
-    // Odstránenie prípadných markdown značiek (Gemma to niekedy robí aj pri JSON móde)
+    // Robustné vyčistenie
     text = text.replace(/```json/g, "").replace(/```/g, "").trim();
     
     try {
