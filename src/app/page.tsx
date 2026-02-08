@@ -7,7 +7,7 @@ import { calculateDistance } from '@/lib/utils';
 import { translations } from '@/lib/translations';
 import { toPng } from 'html-to-image';
 
-// Version: 1.12.0-native-share
+// Version: 1.12.1-restored-compact-layout
 interface WeatherTimelineEntry {
   time: string;
   temperature: number;
@@ -60,22 +60,11 @@ export default function WeatherPage() {
 
   const handleShare = async () => {
     if (!weather?.commentaries) return;
-    
-    const text = `"${weather.commentaries[persona]?.text.trim()}"\n\nPočasie v ${weather.locationName} s charakterom:`;
+    const text = `"${weather.commentaries[persona]?.text.trim()}"\n\nWeather in ${weather.locationName} with personality:`;
     const url = window.location.href;
-
     if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Weather AI',
-          text: text,
-          url: url,
-        });
-      } catch (err) {
-        console.log('Share cancelled');
-      }
+      try { await navigator.share({ title: 'Weather AI', text: text, url: url }); } catch (err) {}
     } else {
-      // Fallback: Download image on Desktop
       await downloadImage();
     }
   };
@@ -95,7 +84,7 @@ export default function WeatherPage() {
       link.href = dataUrl;
       link.click();
     } catch (err) {
-      alert('Export failed on this device. Try sharing the link!');
+      alert('Export failed on this device.');
     } finally {
       setIsSharing(false);
     }
@@ -108,7 +97,7 @@ export default function WeatherPage() {
     const finalLang = translations[lang as keyof typeof translations] ? lang : 'en';
     setCurrentLang(finalLang);
     
-    const cached = localStorage.getItem('weather_cache_v45'); 
+    const cached = localStorage.getItem('weather_cache_v46'); 
     if (cached && !forcePersona && !urlParams.has('lang')) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -137,7 +126,7 @@ export default function WeatherPage() {
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v45', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v46', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || t.weather_error);
@@ -173,16 +162,17 @@ export default function WeatherPage() {
 
   return (
     <main className="min-h-screen bg-[#020617] text-slate-50 font-sans selection:bg-blue-500/30 overflow-x-hidden pb-24 md:pb-12">
-      <div ref={captureRef} className="max-w-4xl mx-auto p-4 md:p-8 space-y-4 md:space-y-6 min-h-screen flex flex-col justify-start bg-[#020617]">
+      <div ref={captureRef} className="max-w-4xl mx-auto p-3 md:p-8 space-y-3 md:space-y-6 min-h-screen flex flex-col justify-start bg-[#020617]">
         
+        {/* Header */}
         <header className="flex justify-between items-start mb-1 px-1 pt-2">
           <div className="flex flex-col gap-0.5">
             <h1 className="text-xl md:text-2xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 uppercase tracking-tighter leading-none">
               Weather AI ✨
             </h1>
             {weather && (
-              <div className="flex items-center text-slate-400 text-lg md:text-2xl font-bold tracking-tight">
-                <MapPin size={16} className="mr-2 text-blue-400 shrink-0" />
+              <div className="flex items-center text-slate-400 text-sm md:text-xl font-bold tracking-tight">
+                <MapPin size={14} className="mr-1 text-blue-400 shrink-0" />
                 <span className="truncate max-w-[180px] md:max-w-none">{weather.locationName}</span>
               </div>
             )}
@@ -213,53 +203,52 @@ export default function WeatherPage() {
           </div>
         ) : weather ? (
           <div className="space-y-3 md:space-y-4 animate-in fade-in duration-700">
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-800 rounded-[2.5rem] p-5 md:p-10 shadow-2xl relative overflow-hidden min-h-[280px] md:min-h-[340px] flex items-center border border-white/10">
-                <div className="absolute -right-12 -top-12 md:-right-20 md:-top-20 opacity-[0.07] pointer-events-none rotate-[15deg]">
-                  {getWeatherIcon(weather.weatherCode, weather.isDay, "w-80 h-80 md:w-[35rem] md:h-[35rem]")}
+              {/* HERO BOX - Restored Compact Style */}
+              <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-800 rounded-[2rem] p-4 md:p-8 shadow-2xl relative overflow-hidden min-h-none border border-white/10 flex items-center transition-all duration-700">
+                <div className="absolute -right-10 -top-10 md:-right-16 md:-top-16 opacity-[0.07] pointer-events-none rotate-12">
+                  {getWeatherIcon(weather.weatherCode, weather.isDay, "w-64 h-64 md:w-[30rem] md:h-[30rem]")}
                 </div>
-                <div className="flex w-full flex-col md:flex-row items-center justify-between gap-8 md:gap-12 relative z-10">
-                  <div className="flex flex-col gap-4 shrink-0 w-full md:w-auto">
-                    <div className="grid grid-cols-3 gap-2.5 md:gap-3">
+                <div className="flex w-full items-center justify-between gap-3 md:gap-12 relative z-10">
+                  <div className="flex flex-col gap-3 shrink-0">
+                    <div className="grid grid-cols-3 gap-1.5 md:gap-3">
                       {[
                         { Icon: ThermometerSnowflake, val: `${Math.round(weather.apparentTemperature)}°`, label: t.feels, color: 'text-blue-100' },
                         { Icon: Droplets, val: `${weather.humidity}%`, label: t.humidity, color: 'text-cyan-200' },
                         { Icon: Wind, val: `${Math.round(weather.windSpeed)}`, label: t.wind, color: 'text-slate-100' }
                       ].map((s, i) => (
-                        <div key={i} className="bg-white/10 backdrop-blur-md p-3.5 md:p-4 rounded-2xl md:rounded-[1.5rem] flex flex-col items-center border border-white/10 shadow-inner">
-                          <s.Icon size={18} className={`${s.color} mb-1.5 opacity-80`} />
-                          <span className="text-lg md:text-xl font-black tabular-nums leading-none">{s.val}</span>
-                          <span className="text-[7px] md:text-[8px] font-black uppercase opacity-60 tracking-[0.15em]">{s.label}</span>
+                        <div key={i} className="bg-white/10 backdrop-blur-md p-2 md:p-4 rounded-xl md:rounded-[1.5rem] flex flex-col items-center border border-white/10 min-w-[65px] md:min-w-[90px]">
+                          <s.Icon size={14} className={`${s.color} mb-1 opacity-80`} />
+                          <span className="text-sm md:text-xl font-black tabular-nums leading-none">{s.val}</span>
+                          <span className="text-[6px] md:text-[8px] font-black uppercase opacity-50 tracking-widest mt-0.5">{s.label}</span>
                         </div>
                       ))}
                     </div>
-                    <div className="grid grid-cols-3 gap-2.5 md:gap-3">
+                    <div className="grid grid-cols-3 gap-1.5 md:gap-3">
                       {[
                         { Icon: Sunrise, val: `${Math.round(weather.timeline[0].temperature)}°`, label: t.morning, color: 'text-orange-200' },
                         { Icon: Sun, val: `${Math.round(weather.timeline[1].temperature)}°`, label: t.noon, color: 'text-yellow-100' },
                         { Icon: Sunset, val: `${Math.round(weather.timeline[2].temperature)}°`, label: t.evening, color: 'text-indigo-100' }
                       ].map((s, i) => (
-                        <div key={i} className="bg-white/10 backdrop-blur-md p-3.5 md:p-4 rounded-2xl md:rounded-[1.5rem] flex flex-col items-center border border-white/5 shadow-inner">
-                          <s.Icon size={18} className={`${s.color} mb-1.5 opacity-80`} />
-                          <span className="text-lg md:text-xl font-black tabular-nums leading-none">{s.val}</span>
-                          <span className="text-[7px] md:text-[8px] font-black uppercase opacity-60 tracking-[0.15em]">{s.label}</span>
+                        <div key={i} className="bg-black/10 backdrop-blur-md p-2 md:p-4 rounded-xl md:rounded-[1.5rem] flex flex-col items-center border border-white/5 min-w-[65px] md:min-w-[90px]">
+                          <s.Icon size={14} className={`${s.color} mb-1 opacity-80`} />
+                          <span className="text-sm md:text-xl font-black tabular-nums leading-none">{s.val}</span>
+                          <span className="text-[6px] md:text-[8px] font-black uppercase opacity-50 tracking-widest mt-0.5">{s.label}</span>
                         </div>
                       ))}
                     </div>
                   </div>
-                  <div className="shrink-0 flex flex-col items-end text-right w-full md:w-auto">
-                    <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.4em] opacity-50 mb-2">{t.current}</span>
-                    <div className="text-8xl md:text-9xl lg:text-[11rem] font-black tracking-tighter leading-none relative z-10 drop-shadow-2xl">
-                      {Math.round(weather.temperature)}°
-                    </div>
-                    <div className="mt-4 md:mt-6 bg-white/10 px-5 py-2 rounded-full backdrop-blur-md border border-white/10 shadow-lg relative z-10">
-                       <span className="text-[10px] md:text-base font-black uppercase tracking-[0.2em] opacity-90">{weather.description}</span>
+                  <div className="shrink-0 flex flex-col items-end text-right pr-1">
+                    <div className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-none drop-shadow-lg">{Math.round(weather.temperature)}°</div>
+                    <div className="mt-2 md:mt-4 bg-white/10 px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-sm">
+                       <span className="text-[8px] md:text-sm font-black uppercase tracking-widest opacity-90">{weather.description}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* NEXT DAYS */}
+              {/* NEXT DAYS - Restored compact horizontal style */}
               <div className="grid grid-cols-2 gap-3 md:gap-4 md:contents">
                 {[
                   { label: t.tomorrow, day: weather.tomorrow },
@@ -268,28 +257,22 @@ export default function WeatherPage() {
                     return d.charAt(0).toUpperCase() + d.slice(1);
                   })(), day: weather.afterTomorrow }
                 ].map((item, i) => (
-                  <div key={i} className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-6 md:p-8 flex flex-col justify-between shadow-xl">
-                    <div className="flex justify-between items-start">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{item.label}</span>
-                      <div className="bg-slate-800/50 p-2 rounded-xl">{getWeatherIcon(item.day.weatherCode, true, "w-6 h-6 md:w-10 h-10")}</div>
+                  <div key={i} className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl md:rounded-[2rem] p-4 md:p-6 flex items-center justify-between shadow-xl">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">{item.label}</span>
+                      <div className="text-2xl md:text-4xl font-black leading-none">{Math.round(item.day.maxTemp)}°</div>
                     </div>
-                    <div>
-                      <div className="text-4xl md:text-5xl font-black leading-none mb-2">{Math.round(item.day.maxTemp)}°</div>
-                      <div className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">{item.day.description}</div>
-                    </div>
+                    <div className="bg-slate-800/50 p-2 rounded-xl">{getWeatherIcon(item.day.weatherCode, true, "w-6 h-6 md:w-10 h-10")}</div>
                   </div>
                 ))}
               </div>
 
               {/* AI COMMENTARY & OUTFIT */}
-              <section className="md:col-span-2 bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden flex-1 min-h-[220px] shadow-2xl flex flex-col justify-center gap-6">
-                <div className="absolute -right-8 -bottom-8 opacity-[0.02]"><User size={300} /></div>
+              <section className="md:col-span-2 bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-10 relative overflow-hidden flex-1 min-h-[140px] shadow-2xl flex flex-col justify-center gap-6">
+                <div className="absolute -right-8 -bottom-8 opacity-[0.02]"><User size={250} /></div>
                 <div className="relative z-10 w-full text-center md:text-left">
                   {!weather.commentaries ? (
-                    <div className="space-y-4 w-full animate-pulse">
-                      <div className="h-3 bg-slate-800/50 rounded-full w-full"></div>
-                      <div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div>
-                    </div>
+                    <div className="space-y-4 w-full animate-pulse"><div className="h-3 bg-slate-800/50 rounded-full w-full"></div><div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div></div>
                   ) : (
                     <p className="text-lg md:text-2xl font-medium leading-relaxed text-slate-200 italic">"{weather.commentaries[persona]?.text.trim()}"</p>
                   )}
@@ -309,8 +292,8 @@ export default function WeatherPage() {
         ) : null}
 
         {/* Action Bar */}
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-lg bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:bg-transparent md:border-none md:shadow-none md:p-0 md:mt-4 no-export">
-          <div className="flex items-center justify-between gap-1.5 md:justify-center md:gap-4">
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-lg bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-1.5 shadow-2xl z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:bg-transparent md:border-none md:shadow-none md:p-0 md:mt-4 no-export">
+          <div className="flex items-center justify-between gap-1 md:justify-center md:gap-4">
             {(Object.keys(PERSONAS) as Persona[]).map((p) => (
               <button key={p} onClick={() => handlePersonaChange(p)} className={`flex-1 md:flex-none px-3 py-4 md:py-3 md:min-w-[130px] rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${persona === p ? 'bg-blue-600 text-white shadow-lg scale-[1.03]' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}>
                 {PERSONAS[p].name}
