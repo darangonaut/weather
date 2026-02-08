@@ -48,3 +48,19 @@ export async function getWeatherData(lat: number, lon: number): Promise<WeatherD
     }
   };
 }
+
+export function getWeatherDescription(code: number): string {
+  const descriptions: Record<number, string> = {
+    0: 'Jasno',
+    1: 'Prevažne jasno', 2: 'Polooblačno', 3: 'Zamračené',
+    45: 'Hmla', 48: 'Námraza',
+    51: 'Mrholenie', 53: 'Mierne mrholenie', 55: 'Husté mrholenie',
+    61: 'Slabý dážď', 63: 'Mierny dážď', 65: 'Silný dážď',
+    71: 'Slabé sneženie', 73: 'Mierne sneženie', 75: 'Silné sneženie',
+    77: 'Snehové krúpy',
+    80: 'Slabé prehánky', 81: 'Mierne prehánky', 82: 'Silné prehánky',
+    85: 'Slabé snehové prehánky', 86: 'Silné snehové prehánky',
+    95: 'Búrka', 96: 'Búrka s krupobitím', 99: 'Silná búrka s krupobitím',
+  };
+  return descriptions[code] || 'Neznáme počasie';
+}
