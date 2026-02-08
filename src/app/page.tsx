@@ -5,7 +5,7 @@ import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.6.6-force-redeploy-final
+// Version: 1.6.7-fix-typescript
 interface WeatherTimelineEntry {
   time: string;
   temperature: number;
@@ -27,12 +27,13 @@ interface WeatherResponse {
   windSpeed: number;
   weatherCode: number;
   isDay: boolean;
+  description: string;
+  commentaries?: Record<Persona, string>;
+  locationName: string;
   time: string;
   timeline: WeatherTimelineEntry[];
   tomorrow: WeatherDay;
   afterTomorrow: WeatherDay;
-  locationName: string;
-  commentaries?: Record<Persona, string>;
 }
 
 interface CacheData {
@@ -52,7 +53,7 @@ export default function WeatherPage() {
 
   const fetchWeather = async (lat: number, lon: number) => {
     const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-    const cached = localStorage.getItem('weather_cache_v26'); 
+    const cached = localStorage.getItem('weather_cache_v27'); 
     if (cached) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -83,7 +84,7 @@ export default function WeatherPage() {
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v26', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v27', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
@@ -150,7 +151,7 @@ export default function WeatherPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               
-              {/* ASYMMETRIC SPLIT HERO BOX */}
+              {/* SPLIT HERO BOX */}
               <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-5 md:p-10 shadow-2xl relative overflow-hidden min-h-[260px] md:min-h-[320px] flex items-center">
                 <div className="absolute top-0 right-0 p-4 opacity-[0.08] pointer-events-none">
                   {getWeatherIcon(weather.weatherCode, weather.isDay, "w-64 h-64 md:w-96 md:h-96")}
@@ -158,46 +159,46 @@ export default function WeatherPage() {
                 
                 <div className="flex w-full items-center justify-between gap-4 md:gap-12 relative z-10">
                   
-                  {/* Left Side: 2x3 Compact Grid of All Stats */}
+                  {/* Left: 2x3 Mriežka detailov */}
                   <div className="grid grid-cols-2 gap-2 md:gap-3 shrink-0">
                     <div className="bg-black/10 backdrop-blur-md px-3 py-2 md:px-4 md:py-3 rounded-2xl flex items-center gap-2.5 border border-white/5">
                       <ThermometerSnowflake size={12} className="text-blue-200" />
-                      <div className="flex flex-col">
+                      <div className="flex flex-col text-left">
                         <span className="text-[6px] md:text-[8px] font-black uppercase opacity-40 tracking-widest leading-none mb-0.5">Pocit</span>
                         <span className="text-[10px] md:text-sm font-bold">{Math.round(weather.apparentTemperature)}°</span>
                       </div>
                     </div>
                     <div className="bg-white/5 backdrop-blur-md px-3 py-2 md:px-4 md:py-3 rounded-2xl flex items-center gap-2.5 border border-white/5">
                       <Sunrise size={12} className="text-orange-300" />
-                      <div className="flex flex-col">
+                      <div className="flex flex-col text-left">
                         <span className="text-[6px] md:text-[8px] font-black uppercase opacity-40 tracking-widest leading-none mb-0.5">Ráno</span>
                         <span className="text-[10px] md:text-sm font-bold">{Math.round(weather.timeline[0].temperature)}°</span>
                       </div>
                     </div>
                     <div className="bg-black/10 backdrop-blur-md px-3 py-2 md:px-4 md:py-3 rounded-2xl flex items-center gap-2.5 border border-white/5">
                       <Droplets size={12} className="text-cyan-300" />
-                      <div className="flex flex-col">
+                      <div className="flex flex-col text-left">
                         <span className="text-[6px] md:text-[8px] font-black uppercase opacity-40 tracking-widest leading-none mb-0.5">Vlh.</span>
                         <span className="text-[10px] md:text-sm font-bold">{weather.humidity}%</span>
                       </div>
                     </div>
                     <div className="bg-white/5 backdrop-blur-md px-3 py-2 md:px-4 md:py-3 rounded-2xl flex items-center gap-2.5 border border-white/5">
                       <Sun size={12} className="text-yellow-200" />
-                      <div className="flex flex-col">
+                      <div className="flex flex-col text-left">
                         <span className="text-[6px] md:text-[8px] font-black uppercase opacity-40 tracking-widest leading-none mb-0.5">Obed</span>
                         <span className="text-[10px] md:text-sm font-bold">{Math.round(weather.timeline[1].temperature)}°</span>
                       </div>
                     </div>
                     <div className="bg-black/10 backdrop-blur-md px-3 py-2 md:px-4 md:py-3 rounded-2xl flex items-center gap-2.5 border border-white/5">
                       <Wind size={12} className="text-slate-200" />
-                      <div className="flex flex-col">
+                      <div className="flex flex-col text-left">
                         <span className="text-[6px] md:text-[8px] font-black uppercase opacity-40 tracking-widest leading-none mb-0.5">Vietor</span>
                         <span className="text-[10px] md:text-sm font-bold">{Math.round(weather.windSpeed)}</span>
                       </div>
                     </div>
                     <div className="bg-white/5 backdrop-blur-md px-3 py-2 md:px-4 md:py-3 rounded-2xl flex items-center gap-2.5 border border-white/5">
                       <Sunset size={12} className="text-indigo-200" />
-                      <div className="flex flex-col">
+                      <div className="flex flex-col text-left">
                         <span className="text-[6px] md:text-[8px] font-black uppercase opacity-40 tracking-widest leading-none mb-0.5">Večer</span>
                         <span className="text-[10px] md:text-sm font-bold">{Math.round(weather.timeline[2].temperature)}°</span>
                       </div>
