@@ -5,7 +5,7 @@ import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.3.0-wide-bento
+// Version: 1.3.1-compact-bento
 interface WeatherDay {
   maxTemp: number;
   minTemp: number;
@@ -42,8 +42,7 @@ export default function WeatherPage() {
 
   const fetchWeather = async (lat: number, lon: number) => {
     const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-    const cached = localStorage.getItem('weather_cache_v13'); 
-    
+    const cached = localStorage.getItem('weather_cache_v14'); 
     if (cached) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -61,7 +60,6 @@ export default function WeatherPage() {
       const weatherRes = await fetch(`/api/weather?lat=${lat}&lon=${lon}&lang=${lang}`);
       const weatherData = await weatherRes.json();
       if (weatherData.error) throw new Error(weatherData.error);
-
       setWeather(weatherData);
       setLoading(false);
       
@@ -69,23 +67,13 @@ export default function WeatherPage() {
       const aiRes = await fetch('/api/commentary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lang,
-          weatherData: {
-            temperature: weatherData.temperature,
-            description: weatherData.description,
-            isDay: weatherData.isDay,
-            tomorrow: weatherData.tomorrow,
-            afterTomorrow: weatherData.afterTomorrow
-          }
-        })
+        body: JSON.stringify({ lang, weatherData })
       });
-      
       const aiData = await aiRes.json();
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v13', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v14', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
@@ -98,10 +86,9 @@ export default function WeatherPage() {
   useEffect(() => {
     const saved = localStorage.getItem('last_persona') as Persona;
     if (saved && PERSONAS[saved]) setPersona(saved);
-
     navigator.geolocation.getCurrentPosition(
       (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-      () => { setError('Povoľte GPS v nastaveniach.'); setLoading(false); },
+      () => { setError('Povoľte GPS.'); setLoading(false); },
       { timeout: 8000 }
     );
   }, []);
@@ -123,140 +110,126 @@ export default function WeatherPage() {
 
   return (
     <main className="min-h-screen bg-[#020617] text-slate-50 font-sans selection:bg-blue-500/30 overflow-x-hidden pb-24 md:pb-0">
-      <div className="max-w-5xl mx-auto p-4 md:p-12 space-y-6 min-h-screen flex flex-col">
+      <div className="max-w-5xl mx-auto p-4 md:p-12 space-y-4 md:space-y-6 min-h-screen flex flex-col">
         
-        <header className="flex justify-between items-center mb-2 md:mb-6 px-1 shrink-0">
+        <header className="flex justify-between items-center mb-2 px-1">
           <div>
             <h1 className="text-xl md:text-3xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 uppercase tracking-tighter">
               Weather AI ✨
             </h1>
-            <div className="flex items-center gap-1.5 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-1.5 text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-0.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-              Gemma 3 27B
+              Gemma 3
             </div>
           </div>
           {weather && (
-            <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-800/50">
-              <MapPin size={10} className="mr-1.5 text-blue-400" />
-              <span className="max-w-[120px] truncate">{weather.locationName}</span>
+            <div className="flex items-center text-slate-400 text-[9px] font-bold uppercase bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-800/50">
+              <MapPin size={8} className="mr-1 text-blue-400" />
+              <span className="max-w-[100px] md:max-w-none truncate">{weather.locationName}</span>
             </div>
           )}
         </header>
 
         {loading ? (
-          <div className="flex-1 flex flex-col items-center justify-center space-y-8 pb-20">
-            <div className="relative bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl">
-              <Loader2 size={48} className="text-blue-400 animate-spin" />
-            </div>
-            <p className="text-lg font-medium text-slate-200 animate-pulse italic">{loadingStatus}</p>
+          <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+            <Loader2 size={40} className="text-blue-400 animate-spin opacity-50" />
+            <p className="text-sm font-medium text-slate-400 italic">{loadingStatus}</p>
           </div>
         ) : error ? (
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="bg-red-500/5 border border-red-500/20 p-12 rounded-[2.5rem] text-center backdrop-blur-xl max-w-sm">
-              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4 opacity-50" />
-              <p className="text-red-200/80 font-medium mb-6">{error}</p>
-              <button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold text-xs tracking-widest transition-all">Skúsiť znova</button>
-            </div>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-red-500/5 rounded-[2rem] border border-red-500/10">
+            <AlertCircle className="w-10 h-10 text-red-500/50 mx-auto mb-4" />
+            <p className="text-red-200/70 text-sm mb-6">{error}</p>
+            <button onClick={() => window.location.reload()} className="px-8 py-3 bg-slate-800 text-white rounded-full text-[10px] font-black uppercase tracking-widest">Skúsiť znova</button>
           </div>
         ) : weather ? (
-          <div className="flex-1 space-y-4 md:space-y-6 animate-in fade-in duration-700">
+          <div className="flex-1 space-y-3 md:space-y-6">
             
-            <div className="grid grid-cols-4 gap-3 md:gap-6">
+            <div className="grid grid-cols-2 gap-3 md:gap-6">
               
-              {/* TERAZ - Široký riadok */}
-              <div className="col-span-4 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 md:p-8 shadow-2xl relative overflow-hidden flex items-center justify-between min-h-[140px]">
+              {/* TERAZ - Full Width (2 columns) */}
+              <div className="col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 md:p-10 shadow-xl relative overflow-hidden flex items-center justify-between min-h-[140px] md:min-h-[180px]">
                 <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                   {getWeatherIcon(weather.weatherCode, weather.isDay, "w-48 h-48")}
                 </div>
                 
-                <div className="flex items-center gap-6 relative z-10">
-                  <div className="bg-white/10 backdrop-blur-xl p-4 rounded-3xl shadow-inner">
-                    {getWeatherIcon(weather.weatherCode, weather.isDay, "w-12 h-12 md:w-16 h-16")}
+                <div className="flex items-center gap-4 md:gap-8 relative z-10">
+                  <div className="bg-white/10 backdrop-blur-xl p-4 md:p-6 rounded-[2rem] shadow-inner">
+                    {getWeatherIcon(weather.weatherCode, weather.isDay, "w-10 h-10 md:w-20 h-20")}
                   </div>
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Aktuálne</span>
-                    <h2 className="text-xs md:text-sm font-bold uppercase tracking-widest block">{weather.description}</h2>
+                    <span className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.2em] opacity-60">Dnes</span>
+                    <h2 className="text-sm md:text-xl font-black uppercase tracking-tighter block">{weather.description}</h2>
                   </div>
                 </div>
 
-                <div className="text-6xl md:text-8xl font-black tracking-tighter relative z-10">
+                <div className="text-5xl md:text-8xl font-black tracking-tighter relative z-10">
                   {Math.round(weather.temperature)}°
                 </div>
               </div>
 
-              {/* ZAJTRA - Polovičná šírka, horizontálne */}
-              <div className="col-span-4 md:col-span-2 bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-6 flex items-center justify-between group hover:border-slate-700 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="bg-slate-800/50 p-3 rounded-2xl">
-                    {getWeatherIcon(weather.tomorrow.weatherCode, true, "w-10 h-10")}
-                  </div>
-                  <div>
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Zajtra</span>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase truncate max-w-[120px]">{weather.tomorrow.description}</div>
-                  </div>
+              {/* ZAJTRA - Half Width */}
+              <div className="col-span-1 bg-slate-900/80 border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all min-h-[140px]">
+                <div className="flex justify-between items-start">
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Zajtra</span>
+                  {getWeatherIcon(weather.tomorrow.weatherCode, true, "w-6 h-6 md:w-10 h-10")}
                 </div>
-                <div className="text-right">
-                  <div className="text-3xl font-black leading-none">{Math.round(weather.tomorrow.maxTemp)}°</div>
-                  <div className="text-[10px] font-bold text-slate-600 mt-1">{Math.round(weather.tomorrow.minTemp)}°</div>
+                <div>
+                  <div className="text-3xl md:text-5xl font-black leading-none">{Math.round(weather.tomorrow.maxTemp)}°</div>
+                  <div className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase mt-2 truncate">{weather.tomorrow.description}</div>
                 </div>
               </div>
 
-              {/* POZAJTRA - Polovičná šírka, horizontálne */}
-              <div className="col-span-4 md:col-span-2 bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2rem] p-6 flex items-center justify-between group hover:border-slate-700 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="bg-slate-800/50 p-3 rounded-2xl">
-                    {getWeatherIcon(weather.afterTomorrow.weatherCode, true, "w-10 h-10")}
-                  </div>
-                  <div>
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
-                      {(() => {
-                        const d = new Date(Date.now() + 172800000).toLocaleDateString('sk-SK', { weekday: 'long' });
-                        return d.charAt(0).toUpperCase() + d.slice(1);
-                      })()}
-                    </span>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase truncate max-w-[120px]">{weather.afterTomorrow.description}</div>
-                  </div>
+              {/* POZAJTRA - Half Width */}
+              <div className="col-span-1 bg-slate-900/80 border border-slate-800 rounded-[2rem] p-5 md:p-8 flex flex-col justify-between hover:border-slate-700 transition-all min-h-[140px]">
+                <div className="flex justify-between items-start">
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
+                    {(() => {
+                      const d = new Date(Date.now() + 172800000).toLocaleDateString('sk-SK', { weekday: 'short' });
+                      return d.charAt(0).toUpperCase() + d.slice(1);
+                    })()}
+                  </span>
+                  {getWeatherIcon(weather.afterTomorrow.weatherCode, true, "w-6 h-6 md:w-10 h-10")}
                 </div>
-                <div className="text-right">
-                  <div className="text-3xl font-black leading-none">{Math.round(weather.afterTomorrow.maxTemp)}°</div>
-                  <div className="text-[10px] font-bold text-slate-600 mt-1">{Math.round(weather.afterTomorrow.minTemp)}°</div>
+                <div>
+                  <div className="text-3xl md:text-5xl font-black leading-none">{Math.round(weather.afterTomorrow.maxTemp)}°</div>
+                  <div className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase mt-2 truncate">{weather.afterTomorrow.description}</div>
                 </div>
               </div>
-            </div>
 
-            {/* AI COMMENTARY */}
-            <section className="bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden flex-1">
-              <div className="absolute -right-8 -bottom-8 opacity-[0.03]">
-                <User size={280} />
-              </div>
-              
-              <div className="relative z-10 space-y-6">
-                <header className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+              {/* AI COMMENTARY - Full Width */}
+              <section className="col-span-2 bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden flex-1 min-h-[200px]">
+                <div className="absolute -right-8 -bottom-8 opacity-[0.03]">
+                  <User size={280} />
+                </div>
+                
+                <div className="relative z-10 space-y-6 h-full flex flex-col">
+                  <header className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center">
                       <User size={14} className="text-blue-400" />
                     </div>
                     <div>
                       <div className="text-[10px] font-black uppercase tracking-widest text-blue-400">{PERSONAS[persona].name}</div>
-                      <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter">
-                        {isGeneratingAI && !weather.commentaries ? 'Gemma analyzuje...' : 'Ready'}
+                      <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter italic">
+                        {isGeneratingAI && !weather.commentaries ? 'Gemma píše...' : 'Ready'}
                       </div>
                     </div>
-                  </div>
-                </header>
+                  </header>
 
-                {(!weather.commentaries && isGeneratingAI) ? (
-                  <div className="space-y-3 py-2 animate-pulse">
-                    <div className="h-3 bg-slate-800/50 rounded-full w-full"></div>
-                    <div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div>
+                  <div className="flex-1 flex items-center">
+                    {(!weather.commentaries && isGeneratingAI) ? (
+                      <div className="space-y-3 w-full animate-pulse">
+                        <div className="h-3 bg-slate-800/50 rounded-full w-full"></div>
+                        <div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div>
+                      </div>
+                    ) : weather.commentaries ? (
+                      <p className="text-base md:text-2xl font-medium leading-relaxed text-slate-200 italic">
+                        "{weather.commentaries[persona]?.trim()}"
+                      </p>
+                    ) : null}
                   </div>
-                ) : weather.commentaries ? (
-                  <p className="text-lg md:text-2xl font-medium leading-relaxed text-slate-200 italic animate-in fade-in duration-300">
-                    "{weather.commentaries[persona]?.trim()}"
-                  </p>
-                ) : null}
-              </div>
-            </section>
+                </div>
+              </section>
+            </div>
           </div>
         ) : null}
 
