@@ -7,7 +7,7 @@ import { calculateDistance } from '@/lib/utils';
 import { translations } from '@/lib/translations';
 import { toPng } from 'html-to-image';
 
-// Version: 1.11.0-full-i18n
+// Version: 1.11.1-robust-share
 interface WeatherTimelineEntry {
   time: string;
   temperature: number;
@@ -56,25 +56,36 @@ export default function WeatherPage() {
   
   const captureRef = useRef<HTMLDivElement>(null);
 
-  // Get translation helper
   const t = translations[currentLang] || translations.en;
 
   const downloadImage = async () => {
-    if (!captureRef.current) return;
+    if (!captureRef.current || isSharing) return;
+    
     setIsSharing(true);
+    
+    // Malý timeout pre istotu
+    await new Promise(resolve => setTimeout(resolve, 300));
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 100));
       const dataUrl = await toPng(captureRef.current, {
-        cacheBust: true,
+        quality: 0.95,
+        pixelRatio: 2,
         backgroundColor: '#020617',
-        style: { padding: '20px' }
+        // Filter out buttons from the screenshot
+        filter: (node) => {
+          const isButton = node.tagName === 'BUTTON';
+          const isNav = node.tagName === 'NAV';
+          return !isButton && !isNav;
+        }
       });
+
       const link = document.createElement('a');
-      link.download = `weather-ai-${weather?.locationName || 'report'}.png`;
+      link.download = `weather-${weather?.locationName || 'ai'}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
-      console.error('Share error:', err);
+      console.error('Export failed:', err);
+      alert('Ospravedlňujeme sa, ale generovanie obrázku v tomto prehliadači zlyhalo.');
     } finally {
       setIsSharing(false);
     }
@@ -82,13 +93,12 @@ export default function WeatherPage() {
 
   const fetchWeather = async (lat: number, lon: number, forcePersona?: Persona) => {
     const activePersona = forcePersona || persona;
-    
     const urlParams = new URLSearchParams(window.location.search);
     const lang = (urlParams.get('lang') || navigator.language.split('-')[0]) as 'sk' | 'en' | 'cs';
     const finalLang = translations[lang] ? lang : 'en';
     setCurrentLang(finalLang);
     
-    const cached = localStorage.getItem('weather_cache_v43'); 
+    const cached = localStorage.getItem('weather_cache_v44'); 
     if (cached && !forcePersona && !urlParams.has('lang')) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -117,7 +127,7 @@ export default function WeatherPage() {
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v43', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v44', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || t.weather_error);
@@ -153,8 +163,9 @@ export default function WeatherPage() {
 
   return (
     <main className="min-h-screen bg-[#020617] text-slate-50 font-sans selection:bg-blue-500/30 overflow-x-hidden pb-24 md:pb-12">
-      <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-4 md:space-y-6 min-h-screen flex flex-col justify-start">
+      <div ref={captureRef} className="max-w-4xl mx-auto p-4 md:p-8 space-y-4 md:space-y-6 min-h-screen flex flex-col justify-start bg-[#020617]">
         
+        {/* Header */}
         <header className="flex justify-between items-start mb-1 px-1 pt-2">
           <div className="flex flex-col gap-0.5">
             <h1 className="text-xl md:text-2xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 uppercase tracking-tighter leading-none">
@@ -167,9 +178,9 @@ export default function WeatherPage() {
               </div>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 no-export">
             {weather && (
-              <button onClick={downloadImage} disabled={isSharing} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 transition-colors group flex items-center gap-2 px-4">
+              <button onClick={downloadImage} disabled={isSharing} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 transition-colors group flex items-center gap-2 px-4 disabled:opacity-50">
                 {isSharing ? <Loader2 size={16} className="animate-spin text-blue-400" /> : <Download size={16} className="text-slate-500 group-hover:text-blue-400" />}
                 <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-slate-500 group-hover:text-slate-200">{t.share}</span>
               </button>
@@ -192,7 +203,7 @@ export default function WeatherPage() {
             <button onClick={() => window.location.reload()} className="px-8 py-3 bg-slate-800 text-white rounded-full text-[10px] font-black uppercase tracking-widest">{t.understood}</button>
           </div>
         ) : weather ? (
-          <div ref={captureRef} className="space-y-3 md:space-y-4 animate-in fade-in duration-700">
+          <div className="space-y-3 md:space-y-4 animate-in fade-in duration-700">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-800 rounded-[2.5rem] p-5 md:p-10 shadow-2xl relative overflow-hidden min-h-[280px] md:min-h-[340px] flex items-center border border-white/10">
                 <div className="absolute -right-12 -top-12 md:-right-20 md:-top-20 opacity-[0.07] pointer-events-none rotate-[15deg]">
@@ -261,7 +272,7 @@ export default function WeatherPage() {
                 ))}
               </div>
 
-              {/* AI COMMENTARY */}
+              {/* AI COMMENTARY & OUTFIT */}
               <section className="md:col-span-2 bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden flex-1 min-h-[220px] shadow-2xl flex flex-col justify-center gap-6">
                 <div className="absolute -right-8 -bottom-8 opacity-[0.02]"><User size={300} /></div>
                 <div className="relative z-10 w-full">
@@ -288,6 +299,7 @@ export default function WeatherPage() {
           </div>
         ) : null}
 
+        {/* Action Bar */}
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-lg bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:bg-transparent md:border-none md:shadow-none md:p-0 md:mt-4">
           <div className="flex items-center justify-between gap-1.5 md:justify-center md:gap-4">
             {(Object.keys(PERSONAS) as Persona[]).map((p) => (
@@ -298,6 +310,7 @@ export default function WeatherPage() {
           </div>
         </nav>
 
+        {/* Help Modal */}
         {showHelp && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
             <div className="bg-slate-900 border border-white/10 w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative animate-in zoom-in-95 duration-300">
