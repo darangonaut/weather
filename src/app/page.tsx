@@ -5,7 +5,7 @@ import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.6.5-clean-split-hero
+// Version: 1.6.6-force-redeploy-final
 interface WeatherTimelineEntry {
   time: string;
   temperature: number;
@@ -27,13 +27,12 @@ interface WeatherResponse {
   windSpeed: number;
   weatherCode: number;
   isDay: boolean;
-  description: string;
-  commentaries?: Record<Persona, string>;
-  locationName: string;
   time: string;
   timeline: WeatherTimelineEntry[];
   tomorrow: WeatherDay;
   afterTomorrow: WeatherDay;
+  locationName: string;
+  commentaries?: Record<Persona, string>;
 }
 
 interface CacheData {
@@ -161,7 +160,6 @@ export default function WeatherPage() {
                   
                   {/* Left Side: 2x3 Compact Grid of All Stats */}
                   <div className="grid grid-cols-2 gap-2 md:gap-3 shrink-0">
-                    {/* Stats */}
                     <div className="bg-black/10 backdrop-blur-md px-3 py-2 md:px-4 md:py-3 rounded-2xl flex items-center gap-2.5 border border-white/5">
                       <ThermometerSnowflake size={12} className="text-blue-200" />
                       <div className="flex flex-col">
@@ -262,7 +260,7 @@ export default function WeatherPage() {
                       <div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div>
                     </div>
                   ) : weather.commentaries ? (
-                    <p className="text-lg md:text-2xl font-medium leading-relaxed text-slate-200 italic">
+                    <p className="text-lg md:text-2xl font-medium leading-relaxed text-slate-200 italic animate-in fade-in duration-500">
                       "{weather.commentaries[persona]?.trim()}"
                     </p>
                   ) : null}
