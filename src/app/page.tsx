@@ -5,7 +5,7 @@ import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.6.9-no-duplicate-icons
+// Version: 1.7.0-watermark-icon-style
 interface WeatherTimelineEntry {
   time: string;
   temperature: number;
@@ -53,7 +53,7 @@ export default function WeatherPage() {
 
   const fetchWeather = async (lat: number, lon: number) => {
     const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-    const cached = localStorage.getItem('weather_cache_v29'); 
+    const cached = localStorage.getItem('weather_cache_v30'); 
     if (cached) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -84,7 +84,7 @@ export default function WeatherPage() {
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v29', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v30', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
@@ -151,8 +151,14 @@ export default function WeatherPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               
-              {/* SPLIT HERO BOX - CLEAN VERSION */}
+              {/* WATERMARK ICON HERO BOX */}
               <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-5 md:p-10 shadow-2xl relative overflow-hidden min-h-[260px] md:min-h-[320px] flex items-center">
+                
+                {/* Background Watermark Icon */}
+                <div className="absolute -right-10 -top-10 md:-right-16 md:-top-16 opacity-[0.12] pointer-events-none rotate-12">
+                  {getWeatherIcon(weather.weatherCode, weather.isDay, "w-64 h-64 md:w-[24rem] md:h-[24rem]")}
+                </div>
+                
                 <div className="flex w-full items-center justify-between gap-4 md:gap-12 relative z-10">
                   
                   {/* Left: 2x3 Mriežka detailov */}
@@ -201,15 +207,13 @@ export default function WeatherPage() {
                     </div>
                   </div>
 
-                  {/* Right Side: Main Temp and Icon */}
-                  <div className="flex-1 flex flex-col items-end text-right">
-                    <div className="bg-white/10 backdrop-blur-xl p-3 md:p-6 rounded-[2rem] shadow-inner border border-white/10 mb-2 md:mb-4">
-                      {getWeatherIcon(weather.weatherCode, weather.isDay, "w-12 h-12 md:w-20 h-20")}
-                    </div>
-                    <div className="text-6xl md:text-9xl font-black tracking-tighter leading-none">
+                  {/* Right Side: Clean Massive Temp and Icon-less layout */}
+                  <div className="flex-1 flex flex-col items-end text-right pr-2 md:pr-4">
+                    <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] opacity-60 mb-2">Aktuálne</span>
+                    <div className="text-7xl md:text-[10rem] font-black tracking-tighter leading-none drop-shadow-sm">
                       {Math.round(weather.temperature)}°
                     </div>
-                    <h2 className="text-[10px] md:text-sm font-black uppercase tracking-widest opacity-70 mt-1 md:mt-2">{weather.description}</h2>
+                    <h2 className="text-[10px] md:text-base font-black uppercase tracking-widest opacity-80 mt-2 md:mt-4 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm border border-white/5">{weather.description}</h2>
                   </div>
 
                 </div>
