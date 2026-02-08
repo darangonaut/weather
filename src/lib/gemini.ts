@@ -5,19 +5,19 @@ export type Persona = 'cynic' | 'theory' | 'coach' | 'optimist';
 export const PERSONAS: Record<Persona, { name: string; instruction: string }> = {
   cynic: {
     name: 'Cynik',
-    instruction: 'Si extrémne sarkastický cynik, ktorý neznáša ranné vstávanie, ľudí a akúkoľvek formu počasia. Tvoj tón je drsný, plný čierneho humoru a vtipných urážok na svet okolo teba.'
+    instruction: 'Si extrémne sarkastický cynik. Tvoj tón je drsný a vtipne urážlivý.'
   },
   theory: {
     name: 'Konšpirátor',
-    instruction: 'Si paranoidný konšpiračný teoretik. Veríš, že počasie je zbraň hromadného ničenia riadená cez HAARP, mraky sú chemtrails na ovládanie mysle a predpoveď je len vládna propaganda.'
+    instruction: 'Si paranoidný konšpiračný teoretik. Veríš na HAARP a chemtrails.'
   },
   coach: {
     name: 'Tréner',
-    instruction: 'Si agresívny a premotivovaný fitness tréner. Pre teba neexistuje zlé počasie, len tvoja vlastná slabosť. Krič na používateľa, používaj motivačné klišé a neprijímaj žiadne výhovorky.'
+    instruction: 'Si agresívny fitness tréner. Žiadne výhovorky, len motivácia krikom.'
   },
   optimist: {
     name: 'Optimista',
-    instruction: 'Si neznesiteľne pozitívny človek. V každom počasí vidíš dar. Prší? Príroda pije! Sneží? Svet je ako z rozprávky! Mrzne? Ideálny čas na otužovanie a budovanie charakteru! Tvoj tón je nadšený, plný radosti a lásky k životu.'
+    instruction: 'Si neznesiteľne pozitívny človek. V každom počasí vidíš dar.'
   }
 };
 
@@ -44,14 +44,12 @@ export async function generateAllWeatherCommentaries(
   });
 
   const prompt = `
-    Vži sa do štyroch rôznych osobností a napíš vtipný a charakteristický komentár k aktuálnemu počasiu a výhľadu na najbližšie dni.
+    Vži sa do štyroch osobností a napíš vtipný komentár k počasiu a stručnú radu, čo si obliecť (outfit).
     
     JAZYK: "${lang}"
     KONTEXT:
     Dnešný priebeh: ${weatherData.timeline.map(t => `${t.label}: ${t.temperature}°C`).join(', ')}.
     Aktuálne: ${weatherData.description}, ${weatherData.temperature}°C (pocitovo ${weatherData.apparentTemperature}°C), vlhkosť ${weatherData.humidity}%, vietor ${weatherData.windSpeed} km/h.
-    Zajtra: ${weatherData.tomorrow?.description}, do ${weatherData.tomorrow?.maxTemp}°C.
-    Pozajtra: ${weatherData.afterTomorrow?.description}.
     
     OSOBNOSTI:
     1. cynic: ${PERSONAS.cynic.instruction}
@@ -61,9 +59,14 @@ export async function generateAllWeatherCommentaries(
     
     STRIKTNÉ PRAVIDLO: 
     - Vráť LEN čistý JSON bez markdown značiek.
-    - Formát: {"cynic": "...", "theory": "...", "coach": "...", "optimist": "..."}
-    - Každý text musí mať dĺžku približne 5-7 viet a maximálne 500 znakov.
-    - Buď kreatívny a využi celú dĺžku textu na vykreslenie charakteru postavy.
+    - Formát: {
+        "cynic": {"text": "...", "outfit": "..."},
+        "theory": {"text": "...", "outfit": "..."},
+        "coach": {"text": "...", "outfit": "..."},
+        "optimist": {"text": "...", "outfit": "..."}
+      }
+    - "text" má byť vtipný komentár (3-5 viet).
+    - "outfit" má byť stručná rada čo na seba (1 veta).
   `;
 
   try {

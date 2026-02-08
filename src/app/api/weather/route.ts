@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const weatherData = await getWeatherData(lat, lon);
-    const description = getWeatherDescription(weatherData.weatherCode);
+    const description = getWeatherDescription(weatherData.weatherCode, lang);
     
     let locationName = 'Neznáma lokalita';
     try {
@@ -34,11 +34,11 @@ export async function GET(request: NextRequest) {
       locationName,
       tomorrow: weatherData.tomorrow ? {
         ...weatherData.tomorrow,
-        description: getWeatherDescription(weatherData.tomorrow.weatherCode)
+        description: getWeatherDescription(weatherData.tomorrow.weatherCode, lang)
       } : undefined,
       afterTomorrow: weatherData.afterTomorrow ? {
         ...weatherData.afterTomorrow,
-        description: getWeatherDescription(weatherData.afterTomorrow.weatherCode)
+        description: getWeatherDescription(weatherData.afterTomorrow.weatherCode, lang)
       } : undefined
     });
   } catch (error: any) {

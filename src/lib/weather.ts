@@ -35,9 +35,6 @@ export async function getWeatherData(lat: number, lon: number): Promise<WeatherD
   }
 
   const data = await response.json();
-  
-  // Extrakcia dát pre Ráno (8:00), Obed (12:00) a Večer (20:00)
-  // Open-Meteo vráti 168 hodín, my potrebujeme indexy pre dnešný deň
   const timelineIndices = [8, 12, 20];
   const timelineLabels = ['Ráno', 'Obed', 'Večer'];
   
@@ -70,18 +67,16 @@ export async function getWeatherData(lat: number, lon: number): Promise<WeatherD
   };
 }
 
-export function getWeatherDescription(code: number): string {
-  const descriptions: Record<number, string> = {
-    0: 'Jasno',
-    1: 'Prevažne jasno', 2: 'Polooblačno', 3: 'Zamračené',
-    45: 'Hmla', 48: 'Námraza',
-    51: 'Mrholenie', 53: 'Mierne mrholenie', 55: 'Husté mrholenie',
-    61: 'Slabý dážď', 63: 'Mierny dážď', 65: 'Silný dážď',
-    71: 'Slabé sneženie', 73: 'Mierne sneženie', 75: 'Silné sneženie',
-    77: 'Snehové krúpy',
-    80: 'Slabé prehánky', 81: 'Mierne prehánky', 82: 'Silné prehánky',
-    85: 'Slabé snehové prehánky', 86: 'Silné snehové prehánky',
-    95: 'Búrka', 96: 'Búrka s krupobitím', 99: 'Silná búrka s krupobitím',
+export function getWeatherDescription(code: number, lang: string = 'sk'): string {
+  const translations: Record<string, Record<number, string>> = {
+    sk: { 0: 'Jasno', 1: 'Prevažne jasno', 2: 'Polooblačno', 3: 'Zamračené', 45: 'Hmla', 61: 'Slabý dážď', 95: 'Búrka' },
+    cs: { 0: 'Jasno', 1: 'Převážně jasno', 2: 'Polojasno', 3: 'Zataženo', 45: 'Mlha', 61: 'Slabý déšť', 95: 'Bouřka' },
+    en: { 0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast', 45: 'Fog', 61: 'Slight rain', 95: 'Thunderstorm' },
+    de: { 0: 'Klarer Himmel', 1: 'Überwiegend klar', 2: 'Teilweise bewölkt', 3: 'Bedeckt', 45: 'Nebel', 61: 'Leichter Regen', 95: 'Gewitter' },
+    es: { 0: 'Cielo despejado', 1: 'Mayormente despejado', 2: 'Parcialmente nublado', 3: 'Nublado', 45: 'Niebla', 61: 'Lluvia ligera', 95: 'Tormenta' },
+    fr: { 0: 'Ciel dégagé', 1: 'Principalement dégagé', 2: 'Partiellement nuageux', 3: 'Couvert', 45: 'Brouillard', 61: 'Pluie légère', 95: 'Orage' }
   };
-  return descriptions[code] || 'Neznáme';
+
+  const l = translations[lang] || translations.en;
+  return l[code] || (translations.en[code] || 'Unknown');
 }
