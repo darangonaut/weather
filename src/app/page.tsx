@@ -9,6 +9,13 @@ export default function LandingPage() {
   const [currentLang, setCurrentLang] = useState<'sk' | 'en' | 'cs' | 'de' | 'es' | 'fr'>('sk');
 
   useEffect(() => {
+    // Redirect PWA users to weather page
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    if (isStandalone) {
+      window.location.href = `/weather${window.location.search}`;
+      return;
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const langParam = urlParams.get('lang') as any;
     const browserLang = navigator.language.split('-')[0] as any;
