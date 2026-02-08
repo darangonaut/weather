@@ -5,7 +5,7 @@ import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.8.0-added-optimist
+// Version: 1.8.1-fixed-stats-order
 interface WeatherTimelineEntry {
   time: string;
   temperature: number;
@@ -53,7 +53,7 @@ export default function WeatherPage() {
 
   const fetchWeather = async (lat: number, lon: number) => {
     const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-    const cached = localStorage.getItem('weather_cache_v34'); 
+    const cached = localStorage.getItem('weather_cache_v35'); 
     if (cached) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -64,7 +64,7 @@ export default function WeatherPage() {
     }
 
     if (!weather) setLoading(true);
-    setLoadingStatus('Hľadám kúsok modrej oblohy...');
+    setLoadingStatus('Upratujem izobary...');
     setError(null);
 
     try {
@@ -84,7 +84,7 @@ export default function WeatherPage() {
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v34', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v35', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
@@ -128,8 +128,8 @@ export default function WeatherPage() {
             Weather AI ✨
           </h1>
           {weather && (
-            <div className="flex items-center text-slate-400 text-lg md:text-xl font-bold tracking-tight">
-              <MapPin size={14} className="mr-1.5 text-blue-400 shrink-0" />
+            <div className="flex items-center text-slate-400 text-lg md:text-2xl font-bold tracking-tight animate-in fade-in slide-in-from-left-2 duration-700">
+              <MapPin size={16} className="mr-2 text-blue-400 shrink-0" />
               <span className="truncate">{weather.locationName}</span>
             </div>
           )}
@@ -159,13 +159,14 @@ export default function WeatherPage() {
                 
                 <div className="flex w-full items-center justify-between gap-4 md:gap-8 relative z-10">
                   
+                  {/* Reordered Stats Grid: Row 1 Tech, Row 2 Time */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 shrink-0 flex-1 md:flex-initial">
                     {[
                       { Icon: ThermometerSnowflake, val: `${Math.round(weather.apparentTemperature)}°`, label: 'Pocit', color: 'text-blue-200' },
-                      { Icon: Sunrise, val: `${Math.round(weather.timeline[0].temperature)}°`, label: 'Ráno', color: 'text-orange-300' },
-                      { Icon: Droplets, val: `${weather.humidity}%`, label: 'Vlh.', color: 'text-cyan-300' },
-                      { Icon: Sun, val: `${Math.round(weather.timeline[1].temperature)}°`, label: 'Obed', color: 'text-yellow-200' },
+                      { Icon: Droplets, val: `${weather.humidity}%`, label: 'Vlhkosť', color: 'text-cyan-300' },
                       { Icon: Wind, val: `${Math.round(weather.windSpeed)}`, label: 'Vietor', color: 'text-slate-200' },
+                      { Icon: Sunrise, val: `${Math.round(weather.timeline[0].temperature)}°`, label: 'Ráno', color: 'text-orange-300' },
+                      { Icon: Sun, val: `${Math.round(weather.timeline[1].temperature)}°`, label: 'Obed', color: 'text-yellow-200' },
                       { Icon: Sunset, val: `${Math.round(weather.timeline[2].temperature)}°`, label: 'Večer', color: 'text-indigo-200' }
                     ].map((s, i) => (
                       <div key={i} className="bg-white/10 backdrop-blur-md p-2.5 md:p-3 rounded-2xl md:rounded-[1.5rem] flex flex-col border border-white/10 shadow-lg">
@@ -187,6 +188,7 @@ export default function WeatherPage() {
                 </div>
               </div>
 
+              {/* NEXT DAYS */}
               <div className="grid grid-cols-2 gap-3 md:gap-4 md:contents">
                 <div className="bg-slate-900/80 border border-slate-800 rounded-[2rem] p-4 md:p-5 flex flex-col justify-between hover:border-slate-700 transition-all min-h-[120px] md:min-h-[110px]">
                   <div className="flex justify-between items-start">
@@ -216,6 +218,7 @@ export default function WeatherPage() {
                 </div>
               </div>
 
+              {/* AI COMMENTARY */}
               <section className="md:col-span-2 bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-8 lg:p-10 relative overflow-hidden min-h-[160px] md:min-h-[140px] flex items-center shadow-lg">
                 <div className="absolute -right-8 -bottom-8 opacity-[0.03]">
                   <User size={280} />
@@ -225,9 +228,6 @@ export default function WeatherPage() {
                     <div className="space-y-3 w-full animate-pulse">
                       <div className="h-3 bg-slate-800/50 rounded-full w-full"></div>
                       <div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div>
-                      <p className="text-slate-500 font-bold italic text-sm mt-4">
-                        {persona === 'optimist' ? 'Hľadám dôvod na oslavu...' : 'Gemma analyzuje...'}
-                      </p>
                     </div>
                   ) : weather.commentaries ? (
                     <p className="text-base md:text-lg lg:text-xl font-medium leading-relaxed text-slate-200 italic animate-in fade-in duration-500">
