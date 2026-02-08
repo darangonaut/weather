@@ -1,3 +1,10 @@
+export interface WeatherTimelineEntry {
+  time: string;
+  temperature: number;
+  weatherCode: number;
+  label: string;
+}
+
 export interface WeatherData {
   temperature: number;
   apparentTemperature: number;
@@ -6,6 +13,7 @@ export interface WeatherData {
   weatherCode: number;
   isDay: boolean;
   time: string;
+  timeline: WeatherTimelineEntry[];
   tomorrow?: {
     maxTemp: number;
     minTemp: number;
@@ -19,7 +27,7 @@ export interface WeatherData {
 }
 
 export async function getWeatherData(lat: number, lon: number): Promise<WeatherData> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,is_day,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,is_day,weather_code&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto`;
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -28,6 +36,18 @@ export async function getWeatherData(lat: number, lon: number): Promise<WeatherD
 
   const data = await response.json();
   
+  // Extrakcia dát pre Ráno (8:00), Obed (12:00) a Večer (20:00)
+  // Open-Meteo vráti 168 hodín, my potrebujeme indexy pre dnešný deň
+  const timelineIndices = [8, 12, 20];
+  const timelineLabels = ['Ráno', 'Obed', 'Večer'];
+  
+  const timeline: WeatherTimelineEntry[] = timelineIndices.map((hour, i) => ({
+    time: data.hourly.time[hour],
+    temperature: data.hourly.temperature_2m[hour],
+    weatherCode: data.hourly.weather_code[hour],
+    label: timelineLabels[i]
+  }));
+
   return {
     temperature: data.current.temperature_2m,
     apparentTemperature: data.current.apparent_temperature,
@@ -36,6 +56,7 @@ export async function getWeatherData(lat: number, lon: number): Promise<WeatherD
     weatherCode: data.current.weather_code,
     isDay: data.current.is_day === 1,
     time: data.current.time,
+    timeline,
     tomorrow: {
       maxTemp: data.daily.temperature_2m_max[1],
       minTemp: data.daily.temperature_2m_min[1],
@@ -62,5 +83,5 @@ export function getWeatherDescription(code: number): string {
     85: 'Slabé snehové prehánky', 86: 'Silné snehové prehánky',
     95: 'Búrka', 96: 'Búrka s krupobitím', 99: 'Silná búrka s krupobitím',
   };
-  return descriptions[code] || 'Neznáme počasie';
+  return descriptions[code] || 'Neznáme';
 }
