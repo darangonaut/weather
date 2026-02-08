@@ -7,7 +7,7 @@ import { calculateDistance } from '@/lib/utils';
 import { translations } from '@/lib/translations';
 import { toPng } from 'html-to-image';
 
-// Version: 1.12.1-restored-compact-layout
+// Version: 1.13.0-image-file-share
 interface WeatherTimelineEntry {
   time: string;
   temperature: number;
@@ -55,36 +55,52 @@ export default function WeatherPage() {
   const [currentLang, setCurrentLang] = useState<'sk' | 'en' | 'cs' | 'de' | 'es' | 'fr'>('sk');
   
   const captureRef = useRef<HTMLDivElement>(null);
-
   const t = translations[currentLang as keyof typeof translations] || translations.en;
 
   const handleShare = async () => {
-    if (!weather?.commentaries) return;
-    const text = `"${weather.commentaries[persona]?.text.trim()}"\n\nWeather in ${weather.locationName} with personality:`;
-    const url = window.location.href;
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Weather AI', text: text, url: url }); } catch (err) {}
-    } else {
-      await downloadImage();
-    }
-  };
-
-  const downloadImage = async () => {
     if (!captureRef.current || isSharing) return;
     setIsSharing(true);
+
     try {
+      // 1. Vygenerovanie PNG (optimalizované pre stabilitu)
       const dataUrl = await toPng(captureRef.current, {
-        quality: 0.9,
+        quality: 0.95,
+        pixelRatio: 2,
         backgroundColor: '#020617',
-        style: { padding: '20px' },
-        filter: (node: any) => !node.classList?.contains('no-export') && node.tagName !== 'BUTTON' && node.tagName !== 'NAV'
+        filter: (node: any) => {
+          if (node.classList?.contains('no-export')) return false;
+          if (['BUTTON', 'NAV'].includes(node.tagName)) return false;
+          return true;
+        }
       });
-      const link = document.createElement('a');
-      link.download = `weather-ai.png`;
-      link.href = dataUrl;
-      link.click();
+
+      // 2. Prevod na súbor (File Object)
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `weather-${weather?.locationName}.png`, { type: 'image/png' });
+
+      // 3. Pokus o natívne zdieľanie súboru
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Weather AI',
+          text: `My weather report from ${weather?.locationName}`
+        });
+      } else {
+        // Fallback: Klasické stiahnutie
+        const link = document.createElement('a');
+        link.download = `weather-ai.png`;
+        link.href = dataUrl;
+        link.click();
+      }
     } catch (err) {
-      alert('Export failed on this device.');
+      console.error('Share failed:', err);
+      // Posledný fallback - aspoň textové zdieľanie
+      if (navigator.share && weather?.commentaries) {
+        await navigator.share({
+          title: 'Weather AI',
+          text: `"${weather.commentaries[persona]?.text}"\n\n${window.location.href}`
+        });
+      }
     } finally {
       setIsSharing(false);
     }
@@ -97,7 +113,7 @@ export default function WeatherPage() {
     const finalLang = translations[lang as keyof typeof translations] ? lang : 'en';
     setCurrentLang(finalLang);
     
-    const cached = localStorage.getItem('weather_cache_v46'); 
+    const cached = localStorage.getItem('weather_cache_v47'); 
     if (cached && !forcePersona && !urlParams.has('lang')) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -126,7 +142,7 @@ export default function WeatherPage() {
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v46', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v47', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || t.weather_error);
@@ -179,8 +195,8 @@ export default function WeatherPage() {
           </div>
           <div className="flex gap-2 no-export">
             {weather && (
-              <button onClick={handleShare} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 transition-colors group flex items-center gap-2 px-4">
-                <Share size={16} className="text-slate-500 group-hover:text-blue-400" />
+              <button onClick={handleShare} disabled={isSharing} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 transition-colors group flex items-center gap-2 px-4 disabled:opacity-50">
+                {isSharing ? <Loader2 size={16} className="animate-spin text-blue-400" /> : <Share size={16} className="text-slate-500 group-hover:text-blue-400" />}
                 <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-slate-500 group-hover:text-slate-200">{t.share}</span>
               </button>
             )}
@@ -203,9 +219,7 @@ export default function WeatherPage() {
           </div>
         ) : weather ? (
           <div className="space-y-3 md:space-y-4 animate-in fade-in duration-700">
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              {/* HERO BOX - Restored Compact Style */}
               <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-800 rounded-[2rem] p-4 md:p-8 shadow-2xl relative overflow-hidden min-h-none border border-white/10 flex items-center transition-all duration-700">
                 <div className="absolute -right-10 -top-10 md:-right-16 md:-top-16 opacity-[0.07] pointer-events-none rotate-12">
                   {getWeatherIcon(weather.weatherCode, weather.isDay, "w-64 h-64 md:w-[30rem] md:h-[30rem]")}
@@ -231,7 +245,7 @@ export default function WeatherPage() {
                         { Icon: Sun, val: `${Math.round(weather.timeline[1].temperature)}°`, label: t.noon, color: 'text-yellow-100' },
                         { Icon: Sunset, val: `${Math.round(weather.timeline[2].temperature)}°`, label: t.evening, color: 'text-indigo-100' }
                       ].map((s, i) => (
-                        <div key={i} className="bg-black/10 backdrop-blur-md p-2 md:p-4 rounded-xl md:rounded-[1.5rem] flex flex-col items-center border border-white/5 min-w-[65px] md:min-w-[90px]">
+                        <div key={i} className="bg-white/10 backdrop-blur-md p-2 md:p-4 rounded-xl md:rounded-[1.5rem] flex flex-col items-center border border-white/5 min-w-[65px] md:min-w-[90px]">
                           <s.Icon size={14} className={`${s.color} mb-1 opacity-80`} />
                           <span className="text-sm md:text-xl font-black tabular-nums leading-none">{s.val}</span>
                           <span className="text-[6px] md:text-[8px] font-black uppercase opacity-50 tracking-widest mt-0.5">{s.label}</span>
@@ -248,7 +262,7 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              {/* NEXT DAYS - Restored compact horizontal style */}
+              {/* NEXT DAYS */}
               <div className="grid grid-cols-2 gap-3 md:gap-4 md:contents">
                 {[
                   { label: t.tomorrow, day: weather.tomorrow },
@@ -293,7 +307,7 @@ export default function WeatherPage() {
 
         {/* Action Bar */}
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-lg bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-1.5 shadow-2xl z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:bg-transparent md:border-none md:shadow-none md:p-0 md:mt-4 no-export">
-          <div className="flex items-center justify-between gap-1 md:justify-center md:gap-4">
+          <div className="flex items-center justify-between gap-1.5 md:justify-center md:gap-4">
             {(Object.keys(PERSONAS) as Persona[]).map((p) => (
               <button key={p} onClick={() => handlePersonaChange(p)} className={`flex-1 md:flex-none px-3 py-4 md:py-3 md:min-w-[130px] rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${persona === p ? 'bg-blue-600 text-white shadow-lg scale-[1.03]' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}>
                 {PERSONAS[p].name}
