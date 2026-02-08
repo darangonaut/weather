@@ -5,7 +5,7 @@ import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.3.2-clean-header
+// Version: 1.3.3-minimalist-ai-box
 interface WeatherDay {
   maxTemp: number;
   minTemp: number;
@@ -42,7 +42,7 @@ export default function WeatherPage() {
 
   const fetchWeather = async (lat: number, lon: number) => {
     const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-    const cached = localStorage.getItem('weather_cache_v15'); 
+    const cached = localStorage.getItem('weather_cache_v16'); 
     if (cached) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -73,7 +73,7 @@ export default function WeatherPage() {
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v15', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v16', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
@@ -147,7 +147,7 @@ export default function WeatherPage() {
                 </div>
                 
                 <div className="flex items-center gap-4 md:gap-8 relative z-10">
-                  <div className="bg-white/10 backdrop-blur-xl p-4 md:p-6 rounded-[2rem] shadow-inner">
+                  <div className="bg-white/10 backdrop-blur-xl p-4 md:p-6 rounded-[2rem] shadow-inner border border-white/10">
                     {getWeatherIcon(weather.weatherCode, weather.isDay, "w-10 h-10 md:w-20 h-20")}
                   </div>
                   <div>
@@ -190,37 +190,24 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              {/* AI COMMENTARY */}
-              <section className="col-span-2 bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden flex-1 min-h-[200px]">
+              {/* AI COMMENTARY - Clean version */}
+              <section className="col-span-2 bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden flex-1 min-h-[180px] flex items-center">
                 <div className="absolute -right-8 -bottom-8 opacity-[0.03]">
                   <User size={280} />
                 </div>
                 
-                <div className="relative z-10 space-y-6 h-full flex flex-col">
-                  <header className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center">
-                      <User size={14} className="text-blue-400" />
+                <div className="relative z-10 w-full">
+                  {(!weather.commentaries && isGeneratingAI) ? (
+                    <div className="space-y-3 w-full animate-pulse">
+                      <div className="h-3 bg-slate-800/50 rounded-full w-full"></div>
+                      <div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div>
+                      <div className="h-3 bg-slate-800/50 rounded-full w-2/3 opacity-50"></div>
                     </div>
-                    <div>
-                      <div className="text-[10px] font-black uppercase tracking-widest text-blue-400">{PERSONAS[persona].name}</div>
-                      <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter italic">
-                        {isGeneratingAI && !weather.commentaries ? 'Gemma píše...' : 'Ready'}
-                      </div>
-                    </div>
-                  </header>
-
-                  <div className="flex-1 flex items-center">
-                    {(!weather.commentaries && isGeneratingAI) ? (
-                      <div className="space-y-3 w-full animate-pulse">
-                        <div className="h-3 bg-slate-800/50 rounded-full w-full"></div>
-                        <div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div>
-                      </div>
-                    ) : weather.commentaries ? (
-                      <p className="text-base md:text-2xl font-medium leading-relaxed text-slate-200 italic">
-                        "{weather.commentaries[persona]?.trim()}"
-                      </p>
-                    ) : null}
-                  </div>
+                  ) : weather.commentaries ? (
+                    <p className="text-lg md:text-2xl font-medium leading-relaxed text-slate-200 italic animate-in fade-in duration-500">
+                      "{weather.commentaries[persona]?.trim()}"
+                    </p>
+                  ) : null}
                 </div>
               </section>
             </div>
