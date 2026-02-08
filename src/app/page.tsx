@@ -50,8 +50,8 @@ export default function LandingPage() {
         {/* Navigation */}
         <nav className="flex flex-col md:flex-row justify-between items-center gap-6 mb-16 md:mb-32">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <Sun className="text-white" size={24} />
+            <div className="w-10 h-10 bg-[#020617] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/10 overflow-hidden border border-white/10">
+              <img src="/icon-192x192.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <span className="text-xl font-black italic tracking-tighter uppercase">Weather AI</span>
           </div>
