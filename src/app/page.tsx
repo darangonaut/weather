@@ -7,7 +7,7 @@ import { calculateDistance } from '@/lib/utils';
 import { translations } from '@/lib/translations';
 import { toPng } from 'html-to-image';
 
-// Version: 1.11.1-robust-share
+// Version: 1.12.0-native-share
 interface WeatherTimelineEntry {
   time: string;
   temperature: number;
@@ -45,7 +45,6 @@ interface CacheData {
   data: WeatherResponse;
 }
 
-// Version: 1.11.2-force-build
 export default function WeatherPage() {
   const [weather, setWeather] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,40 +52,50 @@ export default function WeatherPage() {
   const [persona, setPersona] = useState<Persona>('cynic');
   const [showHelp, setShowHelp] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const [currentLang, setCurrentLang] = useState<'sk' | 'en' | 'cs'>('sk');
+  const [currentLang, setCurrentLang] = useState<'sk' | 'en' | 'cs' | 'de' | 'es' | 'fr'>('sk');
   
   const captureRef = useRef<HTMLDivElement>(null);
 
-  const t = translations[currentLang] || translations.en;
+  const t = translations[currentLang as keyof typeof translations] || translations.en;
+
+  const handleShare = async () => {
+    if (!weather?.commentaries) return;
+    
+    const text = `"${weather.commentaries[persona]?.text.trim()}"\n\nPočasie v ${weather.locationName} s charakterom:`;
+    const url = window.location.href;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Weather AI',
+          text: text,
+          url: url,
+        });
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    } else {
+      // Fallback: Download image on Desktop
+      await downloadImage();
+    }
+  };
 
   const downloadImage = async () => {
     if (!captureRef.current || isSharing) return;
-    
     setIsSharing(true);
-    
-    // Malý timeout pre istotu
-    await new Promise(resolve => setTimeout(resolve, 300));
-
     try {
       const dataUrl = await toPng(captureRef.current, {
-        quality: 0.95,
-        pixelRatio: 2,
+        quality: 0.9,
         backgroundColor: '#020617',
-        // Filter out buttons from the screenshot
-        filter: (node) => {
-          const isButton = node.tagName === 'BUTTON';
-          const isNav = node.tagName === 'NAV';
-          return !isButton && !isNav;
-        }
+        style: { padding: '20px' },
+        filter: (node: any) => !node.classList?.contains('no-export') && node.tagName !== 'BUTTON' && node.tagName !== 'NAV'
       });
-
       const link = document.createElement('a');
-      link.download = `weather-${weather?.locationName || 'ai'}.png`;
+      link.download = `weather-ai.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
-      console.error('Export failed:', err);
-      alert('Ospravedlňujeme sa, ale generovanie obrázku v tomto prehliadači zlyhalo.');
+      alert('Export failed on this device. Try sharing the link!');
     } finally {
       setIsSharing(false);
     }
@@ -95,11 +104,11 @@ export default function WeatherPage() {
   const fetchWeather = async (lat: number, lon: number, forcePersona?: Persona) => {
     const activePersona = forcePersona || persona;
     const urlParams = new URLSearchParams(window.location.search);
-    const lang = (urlParams.get('lang') || navigator.language.split('-')[0]) as 'sk' | 'en' | 'cs';
-    const finalLang = translations[lang] ? lang : 'en';
+    const lang = (urlParams.get('lang') || navigator.language.split('-')[0]) as any;
+    const finalLang = translations[lang as keyof typeof translations] ? lang : 'en';
     setCurrentLang(finalLang);
     
-    const cached = localStorage.getItem('weather_cache_v44'); 
+    const cached = localStorage.getItem('weather_cache_v45'); 
     if (cached && !forcePersona && !urlParams.has('lang')) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -128,7 +137,7 @@ export default function WeatherPage() {
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v44', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v45', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || t.weather_error);
@@ -166,7 +175,6 @@ export default function WeatherPage() {
     <main className="min-h-screen bg-[#020617] text-slate-50 font-sans selection:bg-blue-500/30 overflow-x-hidden pb-24 md:pb-12">
       <div ref={captureRef} className="max-w-4xl mx-auto p-4 md:p-8 space-y-4 md:space-y-6 min-h-screen flex flex-col justify-start bg-[#020617]">
         
-        {/* Header */}
         <header className="flex justify-between items-start mb-1 px-1 pt-2">
           <div className="flex flex-col gap-0.5">
             <h1 className="text-xl md:text-2xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 uppercase tracking-tighter leading-none">
@@ -181,8 +189,8 @@ export default function WeatherPage() {
           </div>
           <div className="flex gap-2 no-export">
             {weather && (
-              <button onClick={downloadImage} disabled={isSharing} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 transition-colors group flex items-center gap-2 px-4 disabled:opacity-50">
-                {isSharing ? <Loader2 size={16} className="animate-spin text-blue-400" /> : <Download size={16} className="text-slate-500 group-hover:text-blue-400" />}
+              <button onClick={handleShare} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 transition-colors group flex items-center gap-2 px-4">
+                <Share size={16} className="text-slate-500 group-hover:text-blue-400" />
                 <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-slate-500 group-hover:text-slate-200">{t.share}</span>
               </button>
             )}
@@ -231,7 +239,7 @@ export default function WeatherPage() {
                         { Icon: Sun, val: `${Math.round(weather.timeline[1].temperature)}°`, label: t.noon, color: 'text-yellow-100' },
                         { Icon: Sunset, val: `${Math.round(weather.timeline[2].temperature)}°`, label: t.evening, color: 'text-indigo-100' }
                       ].map((s, i) => (
-                        <div key={i} className="bg-black/10 backdrop-blur-md p-3.5 md:p-4 rounded-2xl md:rounded-[1.5rem] flex flex-col items-center border border-white/5 shadow-inner">
+                        <div key={i} className="bg-white/10 backdrop-blur-md p-3.5 md:p-4 rounded-2xl md:rounded-[1.5rem] flex flex-col items-center border border-white/5 shadow-inner">
                           <s.Icon size={18} className={`${s.color} mb-1.5 opacity-80`} />
                           <span className="text-lg md:text-xl font-black tabular-nums leading-none">{s.val}</span>
                           <span className="text-[7px] md:text-[8px] font-black uppercase opacity-60 tracking-[0.15em]">{s.label}</span>
@@ -276,7 +284,7 @@ export default function WeatherPage() {
               {/* AI COMMENTARY & OUTFIT */}
               <section className="md:col-span-2 bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden flex-1 min-h-[220px] shadow-2xl flex flex-col justify-center gap-6">
                 <div className="absolute -right-8 -bottom-8 opacity-[0.02]"><User size={300} /></div>
-                <div className="relative z-10 w-full">
+                <div className="relative z-10 w-full text-center md:text-left">
                   {!weather.commentaries ? (
                     <div className="space-y-4 w-full animate-pulse">
                       <div className="h-3 bg-slate-800/50 rounded-full w-full"></div>
@@ -289,7 +297,7 @@ export default function WeatherPage() {
                 {weather.commentaries && (
                   <div className="relative z-10 bg-blue-500/10 border border-blue-500/20 p-4 rounded-3xl flex items-center gap-4">
                     <div className="bg-blue-500/20 p-3 rounded-2xl shrink-0"><Shirt size={20} className="text-blue-400" /></div>
-                    <div>
+                    <div className="text-left">
                       <span className="text-[8px] font-black uppercase tracking-widest text-blue-400 block mb-1">{t.outfit}</span>
                       <p className="text-sm text-slate-200 font-medium">{weather.commentaries[persona]?.outfit}</p>
                     </div>
@@ -301,7 +309,7 @@ export default function WeatherPage() {
         ) : null}
 
         {/* Action Bar */}
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-lg bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:bg-transparent md:border-none md:shadow-none md:p-0 md:mt-4">
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-lg bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:bg-transparent md:border-none md:shadow-none md:p-0 md:mt-4 no-export">
           <div className="flex items-center justify-between gap-1.5 md:justify-center md:gap-4">
             {(Object.keys(PERSONAS) as Persona[]).map((p) => (
               <button key={p} onClick={() => handlePersonaChange(p)} className={`flex-1 md:flex-none px-3 py-4 md:py-3 md:min-w-[130px] rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${persona === p ? 'bg-blue-600 text-white shadow-lg scale-[1.03]' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}>
