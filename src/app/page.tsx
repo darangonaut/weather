@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw, AlertCircle, MapPin, Loader2, Wind, Droplets, ThermometerSnowflake, Clock, Sunrise, Sunset } from 'lucide-react';
+import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw, AlertCircle, MapPin, Loader2, Wind, Droplets, ThermometerSnowflake, Sunrise, Sunset } from 'lucide-react';
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.6.2-dashboard-hero
+// Version: 1.6.3-4-columns-hero
 interface WeatherTimelineEntry {
   time: string;
   temperature: number;
@@ -52,7 +52,7 @@ export default function WeatherPage() {
 
   const fetchWeather = async (lat: number, lon: number) => {
     const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-    const cached = localStorage.getItem('weather_cache_v23'); 
+    const cached = localStorage.getItem('weather_cache_v24'); 
     if (cached) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -63,7 +63,7 @@ export default function WeatherPage() {
     }
 
     if (!weather) setLoading(true);
-    setLoadingStatus('Skenujem troposféru...');
+    setLoadingStatus('Čítam z hviezd...');
     setError(null);
 
     try {
@@ -83,7 +83,7 @@ export default function WeatherPage() {
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v23', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v24', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
@@ -150,66 +150,66 @@ export default function WeatherPage() {
             
             <div className="grid grid-cols-2 gap-3 md:gap-4">
               
-              {/* DASHBOARD HERO BOX */}
-              <div className="col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-5 md:p-10 shadow-2xl relative overflow-hidden min-h-[240px] md:min-h-[300px] flex flex-col justify-center">
+              {/* 4-COLUMN HERO BOX */}
+              <div className="col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-5 md:p-10 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                  {getWeatherIcon(weather.weatherCode, weather.isDay, "w-64 h-64 md:w-80 md:h-80")}
+                  {getWeatherIcon(weather.weatherCode, weather.isDay, "w-64 h-64 md:w-96 md:h-96")}
                 </div>
                 
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 relative z-10 h-full items-center">
                   
-                  {/* Left: 2x3 Grid of Stats */}
-                  <div className="grid grid-cols-2 gap-2 md:gap-3 shrink-0 w-full md:w-auto">
-                    {/* Column 1: Weather Stats */}
-                    <div className="flex flex-col gap-2">
-                      <div className="bg-black/10 backdrop-blur-md px-3 py-2 md:px-4 md:py-2.5 rounded-2xl flex items-center gap-2.5 border border-white/5">
-                        <ThermometerSnowflake size={12} className="text-blue-200 shrink-0" />
-                        <div className="flex flex-col">
-                          <span className="text-[6px] md:text-[7px] font-black uppercase opacity-50 tracking-widest leading-none">Pocitovo</span>
-                          <span className="text-[10px] md:text-sm font-bold">{Math.round(weather.apparentTemperature)}°</span>
-                        </div>
-                      </div>
-                      <div className="bg-black/10 backdrop-blur-md px-3 py-2 md:px-4 md:py-2.5 rounded-2xl flex items-center gap-2.5 border border-white/5">
-                        <Droplets size={12} className="text-cyan-300 shrink-0" />
-                        <div className="flex flex-col">
-                          <span className="text-[6px] md:text-[7px] font-black uppercase opacity-50 tracking-widest leading-none">Vlhkosť</span>
-                          <span className="text-[10px] md:text-sm font-bold">{weather.humidity}%</span>
-                        </div>
-                      </div>
-                      <div className="bg-black/10 backdrop-blur-md px-3 py-2 md:px-4 md:py-2.5 rounded-2xl flex items-center gap-2.5 border border-white/5">
-                        <Wind size={12} className="text-slate-200 shrink-0" />
-                        <div className="flex flex-col">
-                          <span className="text-[6px] md:text-[7px] font-black uppercase opacity-50 tracking-widest leading-none">Vietor</span>
-                          <span className="text-[10px] md:text-sm font-bold">{Math.round(weather.windSpeed)}<span className="text-[8px] ml-0.5 opacity-70">km/h</span></span>
-                        </div>
+                  {/* Col 1: Weather Stats */}
+                  <div className="flex flex-col gap-2">
+                    <div className="bg-black/10 backdrop-blur-md px-3 py-2 rounded-2xl flex items-center gap-2.5 border border-white/5">
+                      <ThermometerSnowflake size={12} className="text-blue-200" />
+                      <div className="flex flex-col">
+                        <span className="text-[6px] md:text-[7px] font-black uppercase opacity-50 tracking-widest">Pocitovo</span>
+                        <span className="text-xs md:text-sm font-bold">{Math.round(weather.apparentTemperature)}°</span>
                       </div>
                     </div>
-
-                    {/* Column 2: Day Timeline */}
-                    <div className="flex flex-col gap-2">
-                      {weather.timeline.map((t, i) => (
-                        <div key={i} className="bg-white/5 backdrop-blur-md px-3 py-2 md:px-4 md:py-2.5 rounded-2xl flex items-center gap-2.5 border border-white/5">
-                          {i === 0 ? <Sunrise size={12} className="text-orange-300 shrink-0" /> : 
-                           i === 1 ? <Sun size={12} className="text-yellow-200 shrink-0" /> : 
-                           <Sunset size={12} className="text-indigo-200 shrink-0" />}
-                          <div className="flex flex-col">
-                            <span className="text-[6px] md:text-[7px] font-black uppercase opacity-50 tracking-widest leading-none">{t.label}</span>
-                            <span className="text-[10px] md:text-sm font-bold">{Math.round(t.temperature)}°</span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="bg-black/10 backdrop-blur-md px-3 py-2 rounded-2xl flex items-center gap-2.5 border border-white/5">
+                      <Droplets size={12} className="text-cyan-300" />
+                      <div className="flex flex-col">
+                        <span className="text-[6px] md:text-[7px] font-black uppercase opacity-50 tracking-widest">Vlhkosť</span>
+                        <span className="text-xs md:text-sm font-bold">{weather.humidity}%</span>
+                      </div>
+                    </div>
+                    <div className="bg-black/10 backdrop-blur-md px-3 py-2 rounded-2xl flex items-center gap-2.5 border border-white/5">
+                      <Wind size={12} className="text-slate-200" />
+                      <div className="flex flex-col">
+                        <span className="text-[6px] md:text-[7px] font-black uppercase opacity-50 tracking-widest">Vietor</span>
+                        <span className="text-xs md:text-sm font-bold">{Math.round(weather.windSpeed)}<span className="text-[8px] ml-0.5 opacity-70">km/h</span></span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Right: Main Temperature and Big Icon */}
-                  <div className="flex items-center gap-4 md:gap-8 flex-1 justify-center md:justify-end">
-                    <div className="flex flex-col items-center md:items-end">
-                      <div className="bg-white/10 backdrop-blur-xl p-3 md:p-5 rounded-[2rem] shadow-inner border border-white/10 mb-2">
-                        {getWeatherIcon(weather.weatherCode, weather.isDay, "w-12 h-12 md:w-20 h-20")}
+                  {/* Col 2: Timeline Stats */}
+                  <div className="flex flex-col gap-2">
+                    {weather.timeline.map((t, i) => (
+                      <div key={i} className="bg-white/5 backdrop-blur-md px-3 py-2 rounded-2xl flex items-center gap-2.5 border border-white/5">
+                        {i === 0 ? <Sunrise size={12} className="text-orange-300" /> : 
+                         i === 1 ? <Sun size={12} className="text-yellow-200" /> : 
+                         <Sunset size={12} className="text-indigo-200" />}
+                        <div className="flex flex-col">
+                          <span className="text-[6px] md:text-[7px] font-black uppercase opacity-50 tracking-widest">{t.label}</span>
+                          <span className="text-xs md:text-sm font-bold">{Math.round(t.temperature)}°</span>
+                        </div>
                       </div>
-                      <h2 className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] opacity-80">{weather.description}</h2>
+                    ))}
+                  </div>
+
+                  {/* Col 3: Icon + Description */}
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <div className="bg-white/10 backdrop-blur-xl p-3 md:p-5 rounded-[2rem] shadow-inner border border-white/10 mb-2">
+                      {getWeatherIcon(weather.weatherCode, weather.isDay, "w-10 h-10 md:w-16 h-16")}
                     </div>
-                    <div className="text-7xl md:text-9xl font-black tracking-tighter leading-none">
+                    <span className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] opacity-60">Dnes</span>
+                    <h2 className="text-[10px] md:text-xs font-black uppercase tracking-widest opacity-90 line-clamp-1">{weather.description}</h2>
+                  </div>
+
+                  {/* Col 4: Massive Temp */}
+                  <div className="flex items-center justify-center md:justify-end">
+                    <div className="text-6xl md:text-8xl font-black tracking-tighter leading-none">
                       {Math.round(weather.temperature)}°
                     </div>
                   </div>
@@ -253,11 +253,11 @@ export default function WeatherPage() {
                 <div className="relative z-10 w-full">
                   {(!weather.commentaries && isGeneratingAI) ? (
                     <div className="space-y-3 w-full animate-pulse">
-                      <div className="h-3 bg-slate-800/50 rounded-full w-full border-none"></div>
-                      <div className="h-3 bg-slate-800/50 rounded-full w-5/6 border-none"></div>
+                      <div className="h-3 bg-slate-800/50 rounded-full w-full"></div>
+                      <div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div>
                     </div>
                   ) : weather.commentaries ? (
-                    <p className="text-base md:text-xl font-medium leading-relaxed text-slate-200 italic">
+                    <p className="text-base md:text-xl font-medium leading-relaxed text-slate-200 italic animate-in fade-in duration-300">
                       "{weather.commentaries[persona]?.trim()}"
                     </p>
                   ) : null}
