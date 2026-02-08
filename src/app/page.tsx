@@ -5,7 +5,7 @@ import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
 
-// Version: 1.7.3-desktop-slim-hero
+// Version: 1.8.0-added-optimist
 interface WeatherTimelineEntry {
   time: string;
   temperature: number;
@@ -53,7 +53,7 @@ export default function WeatherPage() {
 
   const fetchWeather = async (lat: number, lon: number) => {
     const lang = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'sk';
-    const cached = localStorage.getItem('weather_cache_v33'); 
+    const cached = localStorage.getItem('weather_cache_v34'); 
     if (cached) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -64,7 +64,7 @@ export default function WeatherPage() {
     }
 
     if (!weather) setLoading(true);
-    setLoadingStatus('Zhustňujem atmosféru...');
+    setLoadingStatus('Hľadám kúsok modrej oblohy...');
     setError(null);
 
     try {
@@ -84,7 +84,7 @@ export default function WeatherPage() {
       if (aiData.commentaries) {
         const fullData = { ...weatherData, commentaries: aiData.commentaries };
         setWeather(fullData);
-        localStorage.setItem('weather_cache_v33', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
+        localStorage.setItem('weather_cache_v34', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
       setError(err.message || 'Chyba spojenia');
@@ -151,8 +151,7 @@ export default function WeatherPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               
-              {/* SLIM DESKTOP HERO BOX */}
-              <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-6 lg:p-8 shadow-2xl relative overflow-hidden min-h-[260px] md:min-h-[220px] lg:min-h-[260px] flex items-center">
+              <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-6 lg:p-8 shadow-2xl relative overflow-hidden min-h-[260px] md:min-h-[220px] lg:min-h-[260px] flex items-center transition-all duration-700">
                 
                 <div className="absolute -right-10 -top-10 md:-right-16 md:-top-16 opacity-[0.08] pointer-events-none rotate-12">
                   {getWeatherIcon(weather.weatherCode, weather.isDay, "w-64 h-64 md:w-[24rem] md:h-[24rem]")}
@@ -160,12 +159,11 @@ export default function WeatherPage() {
                 
                 <div className="flex w-full items-center justify-between gap-4 md:gap-8 relative z-10">
                   
-                  {/* Stats Grid: 2x3 on Mobile, 3x2 on Desktop */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 shrink-0 flex-1 md:flex-initial">
                     {[
                       { Icon: ThermometerSnowflake, val: `${Math.round(weather.apparentTemperature)}°`, label: 'Pocit', color: 'text-blue-200' },
                       { Icon: Sunrise, val: `${Math.round(weather.timeline[0].temperature)}°`, label: 'Ráno', color: 'text-orange-300' },
-                      { Icon: Droplets, val: `${weather.humidity}%`, label: 'Vlhkosť', color: 'text-cyan-300' },
+                      { Icon: Droplets, val: `${weather.humidity}%`, label: 'Vlh.', color: 'text-cyan-300' },
                       { Icon: Sun, val: `${Math.round(weather.timeline[1].temperature)}°`, label: 'Obed', color: 'text-yellow-200' },
                       { Icon: Wind, val: `${Math.round(weather.windSpeed)}`, label: 'Vietor', color: 'text-slate-200' },
                       { Icon: Sunset, val: `${Math.round(weather.timeline[2].temperature)}°`, label: 'Večer', color: 'text-indigo-200' }
@@ -178,7 +176,6 @@ export default function WeatherPage() {
                     ))}
                   </div>
 
-                  {/* Temperature Side */}
                   <div className="shrink-0 flex flex-col items-end text-right pl-2">
                     <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">Aktuálne</span>
                     <div className="text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-none">
@@ -190,7 +187,6 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              {/* NEXT DAYS */}
               <div className="grid grid-cols-2 gap-3 md:gap-4 md:contents">
                 <div className="bg-slate-900/80 border border-slate-800 rounded-[2rem] p-4 md:p-5 flex flex-col justify-between hover:border-slate-700 transition-all min-h-[120px] md:min-h-[110px]">
                   <div className="flex justify-between items-start">
@@ -220,7 +216,6 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              {/* AI COMMENTARY */}
               <section className="md:col-span-2 bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-8 lg:p-10 relative overflow-hidden min-h-[160px] md:min-h-[140px] flex items-center shadow-lg">
                 <div className="absolute -right-8 -bottom-8 opacity-[0.03]">
                   <User size={280} />
@@ -230,9 +225,12 @@ export default function WeatherPage() {
                     <div className="space-y-3 w-full animate-pulse">
                       <div className="h-3 bg-slate-800/50 rounded-full w-full"></div>
                       <div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div>
+                      <p className="text-slate-500 font-bold italic text-sm mt-4">
+                        {persona === 'optimist' ? 'Hľadám dôvod na oslavu...' : 'Gemma analyzuje...'}
+                      </p>
                     </div>
                   ) : weather.commentaries ? (
-                    <p className="text-base md:text-lg lg:text-xl font-medium leading-relaxed text-slate-200 italic">
+                    <p className="text-base md:text-lg lg:text-xl font-medium leading-relaxed text-slate-200 italic animate-in fade-in duration-500">
                       "{weather.commentaries[persona]?.trim()}"
                     </p>
                   ) : null}
@@ -242,13 +240,13 @@ export default function WeatherPage() {
           </div>
         ) : null}
 
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-slate-900/80 backdrop-blur-2xl border border-white/5 rounded-2xl p-1.5 shadow-2xl z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:bg-transparent md:border-none md:shadow-none md:p-0 md:mt-2">
-          <div className="flex items-center justify-between gap-1 md:justify-center md:gap-4">
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1rem)] max-w-md bg-slate-900/80 backdrop-blur-2xl border border-white/5 rounded-2xl p-1 shadow-2xl z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:bg-transparent md:border-none md:shadow-none md:p-0 md:mt-2">
+          <div className="flex items-center justify-between gap-1 md:justify-center md:gap-3">
             {(Object.keys(PERSONAS) as Persona[]).map((p) => (
               <button
                 key={p}
                 onClick={() => handlePersonaChange(p)}
-                className={`flex-1 md:flex-none px-4 py-3 md:py-2.5 md:min-w-[120px] rounded-xl text-[10px] font-black uppercase transition-all duration-200 ${
+                className={`flex-1 md:flex-none px-2 py-3 md:py-2 md:min-w-[100px] rounded-xl text-[9px] md:text-[10px] font-black uppercase transition-all duration-200 ${
                   persona === p 
                     ? 'bg-blue-600 text-white shadow-lg scale-[1.02]' 
                     : 'text-slate-500 hover:text-slate-300'
