@@ -40,6 +40,7 @@ export async function generateAllWeatherCommentaries(
     
     JAZYK: "${lang}"
     KONTEXT:
+    Dnešný priebeh: ${weatherData.timeline.map(t => `${t.label}: ${t.temperature}°C`).join(', ')}.
     Aktuálne: ${weatherData.description}, ${weatherData.temperature}°C (pocitovo ${weatherData.apparentTemperature}°C), vlhkosť ${weatherData.humidity}%, vietor ${weatherData.windSpeed} km/h.
     Zajtra: ${weatherData.tomorrow?.description}, do ${weatherData.tomorrow?.maxTemp}°C.
     Pozajtra: ${weatherData.afterTomorrow?.description}.
