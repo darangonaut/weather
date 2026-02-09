@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw, AlertCircle, MapPin, Loader2, Wind, Droplets, ThermometerSnowflake, Sunrise, Sunset, HelpCircle, X, Share, Download, Shirt, MoreVertical } from 'lucide-react';
 import { Persona, PERSONAS } from '@/lib/gemini';
 import { calculateDistance } from '@/lib/utils';
@@ -106,8 +106,12 @@ export default function WeatherPage() {
     }
   };
 
-  const fetchWeather = async (lat: number, lon: number, forcePersona?: Persona) => {
-    const activePersona = forcePersona || persona;
+  const fetchWeather = useCallback(async (lat: number, lon: number, forcePersona?: Persona) => {
+    // Ak už máme dáta pre veľmi blízku polohu (menej ako 2km), ignorujeme aktualizáciu na pozadí, aby sme predišli blikaniu
+    if (weather && !forcePersona && calculateDistance(lat, lon, Number(localStorage.getItem('last_lat') || 0), Number(localStorage.getItem('last_lon') || 0)) < 2) {
+      return;
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const lang = (urlParams.get('lang') || navigator.language.split('-')[0]) as any;
     const finalLang = translations[lang as keyof typeof translations] ? lang : 'en';
@@ -130,9 +134,15 @@ export default function WeatherPage() {
       const weatherRes = await fetch(`/api/weather?lat=${lat}&lon=${lon}&lang=${finalLang}`);
       const weatherData = await weatherRes.json();
       if (weatherData.error) throw new Error(weatherData.error);
-      setWeather(weatherData);
+      
+      // Pri aktualizácii na pozadí zachováme staré komentáre, kým sa nenačítajú nové, aby to neprebliklo na skeleton
+      setWeather(prev => prev ? { ...weatherData, commentaries: prev.commentaries } : weatherData);
       setLoading(false);
       
+      // Uložíme aktuálne súradnice pre budúce porovnanie vzdialenosti
+      localStorage.setItem('last_lat', lat.toString());
+      localStorage.setItem('last_lon', lon.toString());
+
       const aiRes = await fetch('/api/commentary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,21 +155,60 @@ export default function WeatherPage() {
         localStorage.setItem('weather_cache_v47', JSON.stringify({ lat, lon, timestamp: Date.now(), data: fullData }));
       }
     } catch (err: any) {
-      setError(err.message || t.weather_error);
+      setError(err.message || (translations[finalLang as keyof typeof translations] || translations.en).weather_error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [weather]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('last_persona') as Persona;
-    if (saved && PERSONAS[saved]) setPersona(saved);
+  const updateLocation = useCallback(() => {
+    setLoading(true);
+    setError(null);
     navigator.geolocation.getCurrentPosition(
-      (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-      () => { setError(t.geo_error); setLoading(false); },
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        localStorage.setItem('last_location_v1', JSON.stringify({ lat, lon }));
+        fetchWeather(lat, lon);
+      },
+      () => { 
+        setError(t.geo_error); 
+        setLoading(false); 
+      },
       { timeout: 8000 }
     );
-  }, []);
+  }, [fetchWeather, t.geo_error]);
+
+  useEffect(() => {
+    const savedPersona = localStorage.getItem('last_persona') as Persona;
+    if (savedPersona && PERSONAS[savedPersona]) setPersona(savedPersona);
+
+    // Načítame z cache pre okamžitý UI feedback
+    const savedLocation = localStorage.getItem('last_location_v1');
+    if (savedLocation) {
+      const { lat, lon } = JSON.parse(savedLocation);
+      fetchWeather(lat, lon);
+    }
+
+    // Vždy skúsime získať čerstvú polohu na pozadí (ak sa používateľ presunul)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        localStorage.setItem('last_location_v1', JSON.stringify({ lat, lon }));
+        fetchWeather(lat, lon);
+      },
+      (err) => {
+        // Ak nemáme nič v cache a GPS zlyhá, ukážeme chybu
+        if (!savedLocation) {
+          setError(t.geo_error);
+          setLoading(false);
+        }
+        console.warn('Background geolocation failed:', err);
+      },
+      { timeout: 10000, enableHighAccuracy: false }
+    );
+  }, [fetchWeather, t.geo_error]);
 
   const handlePersonaChange = (newPersona: Persona) => {
     setPersona(newPersona);
@@ -205,6 +254,9 @@ export default function WeatherPage() {
                 <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-slate-500 group-hover:text-slate-200">{t.share}</span>
               </button>
             )}
+            <button onClick={updateLocation} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 transition-colors group">
+              <RefreshCw size={20} className={`text-slate-500 group-hover:text-blue-400 ${loading ? 'animate-spin' : ''}`} />
+            </button>
             <button onClick={() => setShowHelp(true)} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 transition-colors group">
               <HelpCircle size={20} className="text-slate-500 group-hover:text-blue-400" />
             </button>
@@ -293,7 +345,7 @@ export default function WeatherPage() {
                   {!weather.commentaries ? (
                     <div className="space-y-4 w-full animate-pulse"><div className="h-3 bg-slate-800/50 rounded-full w-full"></div><div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div></div>
                   ) : (
-                    <p className="text-lg md:text-2xl font-medium leading-relaxed text-slate-200 italic">"{weather.commentaries[persona]?.text.trim()}"</p>
+                    <p className="text-lg md:text-2xl font-medium leading-relaxed text-slate-200 italic">&quot;{weather.commentaries[persona]?.text.trim()}&quot;</p>
                   )}
                 </div>
                 {weather.commentaries && (
