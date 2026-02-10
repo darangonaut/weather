@@ -45,11 +45,14 @@ export async function generateAllWeatherCommentaries(
 
   const prompt = `
     Vži sa do štyroch osobností a napíš vtipný komentár k počasiu a stručnú radu, čo si obliecť (outfit).
+    Dôležité: Komentár by mal brať do úvahy nielen aktuálne počasie, ale aj trend na najbližšie dni (či sa ochladí, oteplí alebo začne pršať).
     
     JAZYK: "${lang}"
     KONTEXT:
     Dnešný priebeh: ${weatherData.timeline.map(t => `${t.label}: ${t.temperature}°C`).join(', ')}.
     Aktuálne: ${weatherData.description}, ${weatherData.temperature}°C (pocitovo ${weatherData.apparentTemperature}°C), vlhkosť ${weatherData.humidity}%, vietor ${weatherData.windSpeed} km/h.
+    Zajtra: ${weatherData.tomorrow?.description}, ${weatherData.tomorrow?.minTemp}°C až ${weatherData.tomorrow?.maxTemp}°C.
+    Pozajtra: ${weatherData.afterTomorrow?.description}, ${weatherData.afterTomorrow?.minTemp}°C až ${weatherData.afterTomorrow?.maxTemp}°C.
     
     OSOBNOSTI:
     1. cynic: ${PERSONAS.cynic.instruction}
