@@ -1,0 +1,46 @@
+name: Deploy to weather.markuska.cz
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        run: ssh-keyscan -H 129.159.241.184 >> ~/.ssh/known_hosts
+
+      - name: Pull latest code on server
+        run: |
+          ssh weather@129.159.241.184 "cd /var/www/weather/app && git fetch --quiet origin main && git reset --hard origin/main"
+
+      - name: Install dependencies + build
+        run: |
+          ssh weather@129.159.241.184 "cd /var/www/weather/app && npm ci --no-audit --no-fund && npm run build"
+
+      - name: Update API key
+        run: |
+          ssh weather@129.159.241.184 "cat > /etc/weather/env" <<EOF
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          EOF
+
+      - name: Restart service
+        run: |
+          ssh weather@129.159.241.184 "sudo systemctl restart weather.service && sleep 3 && sudo systemctl status weather.service --no-pager | head -5"
+
+      - name: Smoke test
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://weather.markuska.cz/)
+          echo "HTTP $STATUS"
+          [ "$STATUS" = "200" ] || exit 1
