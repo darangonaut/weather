@@ -89,7 +89,7 @@ export default function LandingPage() {
         <section className="text-center space-y-8 mb-32">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] animate-in fade-in slide-in-from-bottom-2 duration-700">
             <Sparkles size={12} />
-            Gemma 3 27B
+            Gemma 4 31B
           </div>
           
           <h2 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.9] uppercase italic max-w-4xl mx-auto">

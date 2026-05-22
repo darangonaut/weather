@@ -23,7 +23,7 @@ V spodnom menu si môžeš prepínať medzi štyrmi "expertmi", ktorí vidia sve
 Žiadny over-engineering, len čistý a pragmatický kód:
 
 *   **Next.js 16:** Srdce a pľúca aplikácie.
-*   **Gemma 3 27B (via Google AI Studio):** Mozog, ktorý generuje tie šialené hlášky.
+*   **Gemma 4 31B (via Google AI Studio):** Mozog, ktorý generuje tie šialené hlášky.
 *   **Open-Meteo API:** Odkiaľ ťaháme tie reálne dáta (keď ich AI práve nefalšuje).
 *   **Tailwind CSS:** Aby tie Bento boxy vyzerali luxusne aj na tvojom MacBooku.
 *   **PWA:** Nainštaluj si to na plochu a tvár sa, že je to natívna appka.
