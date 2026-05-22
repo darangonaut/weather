@@ -40,7 +40,7 @@ export async function generateAllWeatherCommentaries(
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ 
-    model: "gemma-3-27b-it",
+    model: "gemma-4-31b-it",
   });
 
   const prompt = `
