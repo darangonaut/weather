@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw, AlertCircle, MapPin, Loader2, Wind, Droplets, ThermometerSnowflake, Sunrise, Sunset, HelpCircle, X, Share, Download, Shirt, MoreVertical } from 'lucide-react';
-import { Persona, PERSONAS } from '@/lib/gemini';
+import { Persona, PERSONAS } from '@/lib/personas';
 import { calculateDistance } from '@/lib/utils';
 import { translations } from '@/lib/translations';
 import { toPng } from 'html-to-image';

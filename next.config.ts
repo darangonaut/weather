@@ -14,6 +14,8 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+  output: "export", // statický export — servuje nginx; /api/* rieši PHP na php-fpm
+  images: { unoptimized: true },
   reactCompiler: true,
   turbopack: {}, // Silence the warning/error and allow fallback to Webpack
 };
