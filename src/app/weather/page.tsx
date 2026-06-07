@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw, AlertCircle, MapPin, Loader2, Wind, Droplets, ThermometerSnowflake, Sunrise, Sunset, HelpCircle, X, Share, Download, Shirt, MoreVertical } from 'lucide-react';
+import { Sun, Moon, Cloud, CloudRain, CloudLightning, CloudSnow, User, RefreshCw, AlertCircle, MapPin, Loader2, Wind, Droplets, ThermometerSnowflake, Sunrise, Sunset, HelpCircle, X, Share, Shirt, MoreVertical } from 'lucide-react';
 import { Persona, PERSONAS } from '@/lib/personas';
 import { calculateDistance } from '@/lib/utils';
 import { translations } from '@/lib/translations';
 import { toPng } from 'html-to-image';
 
-// Version: 1.13.0-image-file-share
+// Version: 2.0.0-bento
 interface WeatherTimelineEntry {
   time: string;
   temperature: number;
@@ -53,7 +53,7 @@ export default function WeatherPage() {
   const [showHelp, setShowHelp] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [currentLang, setCurrentLang] = useState<'sk' | 'en' | 'cs' | 'de' | 'es' | 'fr'>('sk');
-  
+
   const captureRef = useRef<HTMLDivElement>(null);
   const t = translations[currentLang as keyof typeof translations] || translations.en;
 
@@ -116,8 +116,8 @@ export default function WeatherPage() {
     const lang = (urlParams.get('lang') || navigator.language.split('-')[0]) as any;
     const finalLang = translations[lang as keyof typeof translations] ? lang : 'en';
     setCurrentLang(finalLang);
-    
-    const cached = localStorage.getItem('weather_cache_v47'); 
+
+    const cached = localStorage.getItem('weather_cache_v47');
     if (cached && !forcePersona && !urlParams.has('lang')) {
       const cacheData: CacheData = JSON.parse(cached);
       if (calculateDistance(lat, lon, cacheData.lat, cacheData.lon) < 5 && (Date.now() - cacheData.timestamp) / 1000 / 60 < 30) {
@@ -134,11 +134,11 @@ export default function WeatherPage() {
       const weatherRes = await fetch(`/api/weather?lat=${lat}&lon=${lon}&lang=${finalLang}`);
       const weatherData = await weatherRes.json();
       if (weatherData.error) throw new Error(weatherData.error);
-      
+
       // Pri aktualizácii na pozadí zachováme staré komentáre, kým sa nenačítajú nové, aby to neprebliklo na skeleton
       setWeather(prev => prev ? { ...weatherData, commentaries: prev.commentaries } : weatherData);
       setLoading(false);
-      
+
       // Uložíme aktuálne súradnice pre budúce porovnanie vzdialenosti
       localStorage.setItem('last_lat', lat.toString());
       localStorage.setItem('last_lon', lon.toString());
@@ -171,9 +171,9 @@ export default function WeatherPage() {
         localStorage.setItem('last_location_v1', JSON.stringify({ lat, lon }));
         fetchWeather(lat, lon);
       },
-      () => { 
-        setError(t.geo_error); 
-        setLoading(false); 
+      () => {
+        setError(t.geo_error);
+        setLoading(false);
       },
       { timeout: 8000 }
     );
@@ -225,155 +225,196 @@ export default function WeatherPage() {
     return <Cloud {...props} className={`${size} text-slate-400`} />;
   };
 
+  // Spoločné triedy bento dlaždice
+  const tile = "rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-sm";
+  const labelCls = "text-[9px] uppercase tracking-widest text-slate-500 font-bold";
+
+  const dayParts = weather ? [
+    { Icon: Sunrise, label: t.morning, i: 0, color: 'text-orange-300' },
+    { Icon: Sun, label: t.noon, i: 1, color: 'text-yellow-300' },
+    { Icon: Sunset, label: t.evening, i: 2, color: 'text-indigo-300' },
+  ] : [];
+
+  const afterTomorrowLabel = (() => {
+    const d = new Date(Date.now() + 172800000).toLocaleDateString(currentLang, { weekday: 'short' });
+    return d.charAt(0).toUpperCase() + d.slice(1);
+  })();
+
   return (
-    <main className="min-h-screen bg-[#020617] text-slate-50 font-sans selection:bg-blue-500/30 overflow-x-hidden pb-24 md:pb-12">
-      <div ref={captureRef} className="max-w-4xl mx-auto p-3 md:p-8 space-y-3 md:space-y-6 min-h-screen flex flex-col justify-start bg-[#020617]">
-        
-        {/* Header */}
-        <header className="flex justify-between items-start mb-1 px-1 pt-2">
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#020617] rounded-lg flex items-center justify-center shadow-lg overflow-hidden border border-white/10 shrink-0">
-                <img src="/icon-192x192.png" alt="Logo" className="w-full h-full object-cover" />
-              </div>
-              <h1 className="text-xl md:text-2xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 uppercase tracking-tighter leading-none">
-                Weather AI
-              </h1>
+    <main className="min-h-screen bg-[#020617] text-slate-50 font-sans selection:bg-blue-500/30 pb-28 md:pb-12">
+      {/* Ambientné svetlo na pozadí */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-[10%] left-[15%] w-[55%] h-[45%] bg-blue-600/10 blur-[130px] rounded-full"></div>
+        <div className="absolute bottom-[5%] right-[8%] w-[40%] h-[40%] bg-indigo-600/10 blur-[130px] rounded-full"></div>
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto p-3 md:p-6">
+
+        {/* Hlavička */}
+        <header className="flex justify-between items-center mb-4 px-1 pt-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-[#020617] rounded-xl flex items-center justify-center border border-white/10 overflow-hidden shrink-0">
+              <img src="/icon-192x192.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
-            {weather && (
-              <div className="flex items-center text-slate-400 text-sm md:text-xl font-bold tracking-tight">
-                <MapPin size={14} className="mr-1 text-blue-400 shrink-0" />
-                <span className="truncate max-w-[180px] md:max-w-none">{weather.locationName}</span>
-              </div>
-            )}
+            <span className="text-lg font-black italic tracking-tighter uppercase bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">Weather AI</span>
           </div>
           <div className="flex gap-2 no-export">
             {weather && (
-              <button onClick={handleShare} disabled={isSharing} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 transition-colors group flex items-center gap-2 px-4 disabled:opacity-50">
-                {isSharing ? <Loader2 size={16} className="animate-spin text-blue-400" /> : <Share size={16} className="text-slate-500 group-hover:text-blue-400" />}
-                <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-slate-500 group-hover:text-slate-200">{t.share}</span>
+              <button onClick={handleShare} disabled={isSharing} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-colors group disabled:opacity-50" title={t.share}>
+                {isSharing ? <Loader2 size={18} className="animate-spin text-blue-400" /> : <Share size={18} className="text-slate-400 group-hover:text-blue-400" />}
               </button>
             )}
-            <button onClick={updateLocation} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 transition-colors group">
-              <RefreshCw size={20} className={`text-slate-500 group-hover:text-blue-400 ${loading ? 'animate-spin' : ''}`} />
+            <button onClick={updateLocation} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-colors group" title="Obnoviť">
+              <RefreshCw size={18} className={`text-slate-400 group-hover:text-blue-400 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button onClick={() => setShowHelp(true)} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 transition-colors group">
-              <HelpCircle size={20} className="text-slate-500 group-hover:text-blue-400" />
+            <button onClick={() => setShowHelp(true)} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-colors group" title="Pomoc">
+              <HelpCircle size={18} className="text-slate-400 group-hover:text-blue-400" />
             </button>
           </div>
         </header>
 
         {loading ? (
-          <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+          <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-6">
             <Loader2 size={40} className="text-blue-400 animate-spin opacity-50" />
             <p className="text-sm font-medium text-slate-400 italic">{t.loading}</p>
           </div>
         ) : error ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-red-500/5 rounded-3xl border border-red-500/10">
-            <AlertCircle className="w-10 h-10 text-red-500/50 mx-auto mb-4" />
+          <div className={`${tile} min-h-[40vh] flex flex-col items-center justify-center p-8 text-center !bg-red-500/5 !border-red-500/10`}>
+            <AlertCircle className="w-10 h-10 text-red-500/50 mb-4" />
             <p className="text-red-200/70 text-sm mb-6">{error}</p>
-            <button onClick={() => window.location.reload()} className="px-8 py-3 bg-slate-800 text-white rounded-full text-[10px] font-black uppercase tracking-widest">{t.understood}</button>
+            <button onClick={() => window.location.reload()} className="px-8 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-colors">{t.understood}</button>
           </div>
         ) : weather ? (
-          <div className="space-y-3 md:space-y-4 animate-in fade-in duration-700">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              <div className="col-span-1 md:col-span-2 bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-800 rounded-[2rem] p-4 md:p-8 shadow-2xl relative overflow-hidden min-h-none border border-white/10 flex items-center transition-all duration-700">
-                <div className="absolute -right-10 -top-10 md:-right-16 md:-top-16 opacity-[0.07] pointer-events-none rotate-12">
-                  {getWeatherIcon(weather.weatherCode, weather.isDay, "w-64 h-64 md:w-[30rem] md:h-[30rem]")}
+          <div ref={captureRef} className="bg-[#020617] rounded-[2rem]">
+            {/* === BENTO MRIEŽKA === */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 animate-in fade-in duration-700">
+
+              {/* HERO — aktuálna teplota (2×2) */}
+              <div className="col-span-2 md:row-span-2 rounded-[2rem] border border-white/10 bg-gradient-to-br from-blue-600 to-indigo-800 p-6 relative overflow-hidden flex flex-col justify-between min-h-[200px] md:min-h-[260px]">
+                <div className="absolute -right-10 -top-10 opacity-[0.12] rotate-12 pointer-events-none">
+                  {getWeatherIcon(weather.weatherCode, weather.isDay, "w-64 h-64")}
                 </div>
-                <div className="flex w-full items-center justify-between gap-3 md:gap-12 relative z-10">
-                  <div className="flex flex-col gap-3 shrink-0">
-                    <div className="grid grid-cols-3 gap-1.5 md:gap-3">
-                      {[
-                        { Icon: ThermometerSnowflake, val: `${Math.round(weather.apparentTemperature)}°`, label: t.feels, color: 'text-blue-100' },
-                        { Icon: Droplets, val: `${weather.humidity}%`, label: t.humidity, color: 'text-cyan-200' },
-                        { Icon: Wind, val: `${Math.round(weather.windSpeed)}`, label: t.wind, color: 'text-slate-100' }
-                      ].map((s, i) => (
-                        <div key={i} className="bg-white/10 backdrop-blur-md p-2 md:p-4 rounded-xl md:rounded-[1.5rem] flex flex-col items-center border border-white/10 min-w-[65px] md:min-w-[90px]">
-                          <s.Icon size={14} className={`${s.color} mb-1 opacity-80`} />
-                          <span className="text-sm md:text-xl font-black tabular-nums leading-none">{s.val}</span>
-                          <span className="text-[6px] md:text-[8px] font-black uppercase opacity-50 tracking-widest mt-0.5">{s.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-3 gap-1.5 md:gap-3">
-                      {[
-                        { Icon: Sunrise, val: `${Math.round(weather.timeline[0].temperature)}°`, label: t.morning, color: 'text-orange-200' },
-                        { Icon: Sun, val: `${Math.round(weather.timeline[1].temperature)}°`, label: t.noon, color: 'text-yellow-100' },
-                        { Icon: Sunset, val: `${Math.round(weather.timeline[2].temperature)}°`, label: t.evening, color: 'text-indigo-100' }
-                      ].map((s, i) => (
-                        <div key={i} className="bg-white/10 backdrop-blur-md p-2 md:p-4 rounded-xl md:rounded-[1.5rem] flex flex-col items-center border border-white/5 min-w-[65px] md:min-w-[90px]">
-                          <s.Icon size={14} className={`${s.color} mb-1 opacity-80`} />
-                          <span className="text-sm md:text-xl font-black tabular-nums leading-none">{s.val}</span>
-                          <span className="text-[6px] md:text-[8px] font-black uppercase opacity-50 tracking-widest mt-0.5">{s.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="shrink-0 flex flex-col items-end text-right pr-1">
-                    <div className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-none drop-shadow-lg">{Math.round(weather.temperature)}°</div>
-                    <div className="mt-2 md:mt-4 bg-white/10 px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-sm">
-                       <span className="text-[8px] md:text-sm font-black uppercase tracking-widest opacity-90">{weather.description}</span>
-                    </div>
-                  </div>
+                <div className="relative flex items-center gap-1.5 text-blue-100 font-semibold text-sm md:text-base">
+                  <MapPin size={16} className="shrink-0" />
+                  <span className="truncate">{weather.locationName}</span>
+                </div>
+                <div className="relative">
+                  <div className="text-7xl md:text-9xl font-black tracking-tighter leading-none drop-shadow-lg">{Math.round(weather.temperature)}°</div>
+                  <div className="inline-block mt-3 bg-white/15 backdrop-blur px-3 py-1 rounded-full border border-white/10 text-[10px] md:text-xs font-bold uppercase tracking-widest">{weather.description}</div>
                 </div>
               </div>
 
-              {/* NEXT DAYS */}
-              <div className="grid grid-cols-2 gap-3 md:gap-4 md:contents">
-                {[
-                  { label: t.tomorrow, day: weather.tomorrow },
-                  { label: (() => {
-                    const d = new Date(Date.now() + 172800000).toLocaleDateString(currentLang, { weekday: 'short' });
-                    return d.charAt(0).toUpperCase() + d.slice(1);
-                  })(), day: weather.afterTomorrow }
-                ].map((item, i) => (
-                  <div key={i} className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl md:rounded-[2rem] p-4 md:p-6 flex items-center justify-between shadow-xl">
-                    <div className="flex flex-col">
-                      <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">{item.label}</span>
-                      <div className="text-2xl md:text-4xl font-black leading-none">{Math.round(item.day.maxTemp)}°</div>
-                    </div>
-                    <div className="bg-slate-800/50 p-2 rounded-xl">{getWeatherIcon(item.day.weatherCode, true, "w-6 h-6 md:w-10 h-10")}</div>
-                  </div>
-                ))}
+              {/* Pocitová teplota */}
+              <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
+                <ThermometerSnowflake size={18} className="text-blue-300/80" />
+                <div>
+                  <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{Math.round(weather.apparentTemperature)}°</div>
+                  <div className={`${labelCls} mt-1.5`}>{t.feels}</div>
+                </div>
               </div>
 
-              {/* AI COMMENTARY & OUTFIT */}
-              <section className="md:col-span-2 bg-slate-900/40 backdrop-blur-sm border border-slate-800/50 rounded-[2.5rem] p-6 md:p-10 relative overflow-hidden flex-1 min-h-[140px] shadow-2xl flex flex-col justify-center gap-6">
-                <div className="absolute -right-8 -bottom-8 opacity-[0.02]"><User size={250} /></div>
-                <div className="relative z-10 w-full text-center md:text-left">
+              {/* Vlhkosť */}
+              <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
+                <Droplets size={18} className="text-cyan-300/80" />
+                <div>
+                  <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{weather.humidity}%</div>
+                  <div className={`${labelCls} mt-1.5`}>{t.humidity}</div>
+                </div>
+              </div>
+
+              {/* Vietor */}
+              <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
+                <Wind size={18} className="text-slate-300/80" />
+                <div>
+                  <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{Math.round(weather.windSpeed)}<span className="text-sm font-bold text-slate-500"> km/h</span></div>
+                  <div className={`${labelCls} mt-1.5`}>{t.wind}</div>
+                </div>
+              </div>
+
+              {/* Deň / noc + čas */}
+              <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
+                {weather.isDay ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-indigo-300" />}
+                <div>
+                  <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{weather.time?.slice(11, 16)}</div>
+                  <div className={`${labelCls} mt-1.5`}>{weather.isDay ? 'Deň' : 'Noc'}</div>
+                </div>
+              </div>
+
+              {/* Dnešný priebeh (2 stĺpce) */}
+              <div className={`${tile} col-span-2 p-4 md:p-5`}>
+                <div className={`${labelCls} mb-3`}>Dnešný priebeh</div>
+                <div className="flex justify-between gap-2">
+                  {dayParts.map(({ Icon, label, i, color }) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5 rounded-2xl bg-white/[0.03] py-3">
+                      <Icon size={16} className={color} />
+                      <div className="text-lg md:text-xl font-black tabular-nums leading-none">{Math.round(weather.timeline[i].temperature)}°</div>
+                      <div className="text-[8px] uppercase tracking-wider text-slate-500 font-bold">{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Zajtra */}
+              <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
+                <div className="flex items-center justify-between">
+                  <span className={labelCls}>{t.tomorrow}</span>
+                  <div className="bg-white/5 rounded-xl p-1.5">{getWeatherIcon(weather.tomorrow.weatherCode, true, "w-5 h-5")}</div>
+                </div>
+                <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{Math.round(weather.tomorrow.maxTemp)}°</div>
+              </div>
+
+              {/* Pozajtra */}
+              <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
+                <div className="flex items-center justify-between">
+                  <span className={labelCls}>{afterTomorrowLabel}</span>
+                  <div className="bg-white/5 rounded-xl p-1.5">{getWeatherIcon(weather.afterTomorrow.weatherCode, true, "w-5 h-5")}</div>
+                </div>
+                <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{Math.round(weather.afterTomorrow.maxTemp)}°</div>
+              </div>
+
+              {/* AI komentár (celá šírka) */}
+              <section className="col-span-2 md:col-span-4 rounded-[2rem] border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6 md:p-8 relative overflow-hidden">
+                <div className="absolute -right-8 -bottom-8 opacity-[0.03] pointer-events-none"><User size={220} /></div>
+                <div className="relative">
                   {!weather.commentaries ? (
-                    <div className="space-y-4 w-full animate-pulse"><div className="h-3 bg-slate-800/50 rounded-full w-full"></div><div className="h-3 bg-slate-800/50 rounded-full w-5/6"></div></div>
+                    <div className="space-y-3 animate-pulse">
+                      <div className="h-3 bg-slate-700/50 rounded-full w-full"></div>
+                      <div className="h-3 bg-slate-700/50 rounded-full w-5/6"></div>
+                      <div className="h-3 bg-slate-700/50 rounded-full w-2/3"></div>
+                    </div>
                   ) : (
                     <p className="text-lg md:text-2xl font-medium leading-relaxed text-slate-200 italic">&quot;{weather.commentaries[persona]?.text.trim()}&quot;</p>
                   )}
-                </div>
-                {weather.commentaries && (
-                  <div className="relative z-10 bg-blue-500/10 border border-blue-500/20 p-4 rounded-3xl flex items-center gap-4">
-                    <div className="bg-blue-500/20 p-3 rounded-2xl shrink-0"><Shirt size={20} className="text-blue-400" /></div>
-                    <div className="text-left">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-blue-400 block mb-1">{t.outfit}</span>
-                      <p className="text-sm text-slate-200 font-medium">{weather.commentaries[persona]?.outfit}</p>
+                  {weather.commentaries && (
+                    <div className="mt-6 flex items-center gap-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
+                      <div className="bg-blue-500/20 p-3 rounded-2xl shrink-0"><Shirt size={20} className="text-blue-400" /></div>
+                      <div className="text-left">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-blue-400 block mb-1">{t.outfit}</span>
+                        <p className="text-sm text-slate-200 font-medium">{weather.commentaries[persona]?.outfit}</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </section>
+
             </div>
           </div>
         ) : null}
 
-        {/* Action Bar */}
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-lg bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-1.5 shadow-2xl z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:bg-transparent md:border-none md:shadow-none md:p-0 md:mt-4 no-export">
-          <div className="flex items-center justify-between gap-1.5 md:justify-center md:gap-4">
-            {(Object.keys(PERSONAS) as Persona[]).map((p) => (
-              <button key={p} onClick={() => handlePersonaChange(p)} className={`flex-1 md:flex-none px-3 py-4 md:py-3 md:min-w-[130px] rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${persona === p ? 'bg-blue-600 text-white shadow-lg scale-[1.03]' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}>
-                {PERSONAS[p].name}
-              </button>
-            ))}
-          </div>
-        </nav>
+        {/* Výber osobnosti */}
+        {weather && !error && (
+          <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-lg bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-1.5 shadow-2xl z-50 md:relative md:bottom-0 md:left-0 md:translate-x-0 md:max-w-none md:mt-4 md:bg-white/[0.03] md:shadow-none no-export">
+            <div className="flex items-center justify-between gap-1.5 md:justify-center md:gap-3">
+              {(Object.keys(PERSONAS) as Persona[]).map((p) => (
+                <button key={p} onClick={() => handlePersonaChange(p)} className={`flex-1 md:flex-none px-3 py-4 md:py-3 md:min-w-[130px] rounded-[1.4rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${persona === p ? 'bg-blue-600 text-white shadow-lg scale-[1.03]' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}>
+                  {PERSONAS[p].name}
+                </button>
+              ))}
+            </div>
+          </nav>
+        )}
 
-        {/* Help Modal */}
+        {/* Modálne okno s pomocou */}
         {showHelp && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
             <div className="bg-slate-900 border border-white/10 w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative animate-in zoom-in-95 duration-300">
