@@ -226,7 +226,7 @@ export default function WeatherPage() {
   };
 
   // Spoločné triedy bento dlaždice
-  const tile = "rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-sm";
+  const tile = "rounded-[1.75rem] border border-white/10 bg-white/[0.03] backdrop-blur-sm transition-transform duration-300 hover:-translate-y-1";
   const labelCls = "text-[9px] uppercase tracking-widest text-slate-500 font-bold";
 
   const dayParts = weather ? [
@@ -238,6 +238,21 @@ export default function WeatherPage() {
   const afterTomorrowLabel = (() => {
     const d = new Date(Date.now() + 172800000).toLocaleDateString(currentLang, { weekday: 'short' });
     return d.charAt(0).toUpperCase() + d.slice(1);
+  })();
+
+  // Mini krivka denných teplôt (SVG sparkline) pre bento dlaždicu
+  const curve = (() => {
+    if (!weather) return null;
+    const temps = weather.timeline.map((e) => e.temperature);
+    const min = Math.min(...temps), max = Math.max(...temps), range = max - min || 1;
+    const W = 260, H = 80, pad = 16;
+    const pts = temps.map((tmp, i) => ({
+      x: pad + (i * (W - 2 * pad)) / (temps.length - 1),
+      y: pad + (1 - (tmp - min) / range) * (H - 2 * pad),
+    }));
+    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+    const area = `${line} L ${pts[pts.length - 1].x.toFixed(1)} ${H} L ${pts[0].x.toFixed(1)} ${H} Z`;
+    return { pts, line, area, W, H };
   })();
 
   return (
@@ -304,35 +319,44 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              {/* Pocitová teplota */}
-              <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
-                <ThermometerSnowflake size={18} className="text-blue-300/80" />
+              {/* Pocitová teplota — teplý akcent */}
+              <div className="rounded-[1.75rem] border border-amber-500/15 bg-gradient-to-br from-amber-500/10 to-orange-500/[0.03] p-4 md:p-5 flex flex-col justify-between min-h-[90px] transition-transform duration-300 hover:-translate-y-1">
+                <ThermometerSnowflake size={18} className="text-amber-300/90" />
                 <div>
                   <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{Math.round(weather.apparentTemperature)}°</div>
                   <div className={`${labelCls} mt-1.5`}>{t.feels}</div>
                 </div>
               </div>
 
-              {/* Vlhkosť */}
-              <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
-                <Droplets size={18} className="text-cyan-300/80" />
+              {/* Vlhkosť — kruhový gauge, cyan akcent */}
+              <div className="rounded-[1.75rem] border border-cyan-400/15 bg-gradient-to-br from-cyan-500/10 to-cyan-500/[0.03] p-4 md:p-5 flex items-center gap-3 min-h-[90px] transition-transform duration-300 hover:-translate-y-1">
+                <div className="relative shrink-0">
+                  <svg width="54" height="54" viewBox="0 0 64 64" className="-rotate-90">
+                    <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="7" />
+                    <circle cx="32" cy="32" r="26" fill="none" stroke="#22d3ee" strokeWidth="7" strokeLinecap="round" strokeDasharray={2 * Math.PI * 26} strokeDashoffset={2 * Math.PI * 26 * (1 - weather.humidity / 100)} />
+                  </svg>
+                  <Droplets size={15} className="text-cyan-300 absolute inset-0 m-auto" />
+                </div>
                 <div>
                   <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{weather.humidity}%</div>
                   <div className={`${labelCls} mt-1.5`}>{t.humidity}</div>
                 </div>
               </div>
 
-              {/* Vietor */}
+              {/* Vietor — so škálou rýchlosti */}
               <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
                 <Wind size={18} className="text-slate-300/80" />
                 <div>
                   <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{Math.round(weather.windSpeed)}<span className="text-sm font-bold text-slate-500"> km/h</span></div>
+                  <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-slate-400 to-blue-400" style={{ width: `${Math.min(100, (weather.windSpeed / 60) * 100)}%` }}></div>
+                  </div>
                   <div className={`${labelCls} mt-1.5`}>{t.wind}</div>
                 </div>
               </div>
 
-              {/* Deň / noc + čas */}
-              <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
+              {/* Deň / noc + čas — indigo akcent */}
+              <div className="rounded-[1.75rem] border border-indigo-400/15 bg-gradient-to-br from-indigo-500/10 to-indigo-500/[0.03] p-4 md:p-5 flex flex-col justify-between min-h-[90px] transition-transform duration-300 hover:-translate-y-1">
                 {weather.isDay ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-indigo-300" />}
                 <div>
                   <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{weather.time?.slice(11, 16)}</div>
@@ -340,36 +364,54 @@ export default function WeatherPage() {
                 </div>
               </div>
 
-              {/* Dnešný priebeh (2 stĺpce) */}
+              {/* Dnešný priebeh — krivka teplôt (2 stĺpce) */}
               <div className={`${tile} col-span-2 p-4 md:p-5`}>
-                <div className={`${labelCls} mb-3`}>Dnešný priebeh</div>
-                <div className="flex justify-between gap-2">
-                  {dayParts.map(({ Icon, label, i, color }) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5 rounded-2xl bg-white/[0.03] py-3">
-                      <Icon size={16} className={color} />
-                      <div className="text-lg md:text-xl font-black tabular-nums leading-none">{Math.round(weather.timeline[i].temperature)}°</div>
-                      <div className="text-[8px] uppercase tracking-wider text-slate-500 font-bold">{label}</div>
+                <div className={`${labelCls} mb-2`}>Dnešný priebeh</div>
+                {curve && (
+                  <>
+                    <svg viewBox={`0 0 ${curve.W} ${curve.H}`} className="w-full" preserveAspectRatio="none" style={{ height: '70px' }}>
+                      <defs>
+                        <linearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.35" />
+                          <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      <path d={curve.area} fill="url(#curveFill)" />
+                      <path d={curve.line} fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                      {curve.pts.map((p, i) => (
+                        <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#0b1220" stroke="#7dd3fc" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                      ))}
+                    </svg>
+                    <div className="flex justify-between mt-1">
+                      {dayParts.map(({ Icon, label, i, color }) => (
+                        <div key={i} className="flex flex-col items-center gap-0.5 flex-1">
+                          <Icon size={13} className={color} />
+                          <div className="text-sm font-black tabular-nums leading-none">{Math.round(weather.timeline[i].temperature)}°</div>
+                          <div className="text-[8px] uppercase tracking-wider text-slate-500 font-bold">{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Ďalšie dni (2 stĺpce) */}
+              <div className={`${tile} col-span-2 p-4 md:p-5`}>
+                <div className={`${labelCls} mb-3`}>Ďalšie dni</div>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: t.tomorrow, day: weather.tomorrow },
+                    { label: afterTomorrowLabel, day: weather.afterTomorrow },
+                  ].map((d, i) => (
+                    <div key={i} className="rounded-2xl bg-white/[0.03] p-3 flex items-center justify-between">
+                      <div>
+                        <div className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">{d.label}</div>
+                        <div className="text-xl md:text-2xl font-black tabular-nums leading-none">{Math.round(d.day.maxTemp)}°<span className="text-xs font-bold text-slate-500 ml-1">{Math.round(d.day.minTemp)}°</span></div>
+                      </div>
+                      <div className="bg-white/5 rounded-xl p-1.5">{getWeatherIcon(d.day.weatherCode, true, "w-6 h-6")}</div>
                     </div>
                   ))}
                 </div>
-              </div>
-
-              {/* Zajtra */}
-              <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
-                <div className="flex items-center justify-between">
-                  <span className={labelCls}>{t.tomorrow}</span>
-                  <div className="bg-white/5 rounded-xl p-1.5">{getWeatherIcon(weather.tomorrow.weatherCode, true, "w-5 h-5")}</div>
-                </div>
-                <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{Math.round(weather.tomorrow.maxTemp)}°</div>
-              </div>
-
-              {/* Pozajtra */}
-              <div className={`${tile} p-4 md:p-5 flex flex-col justify-between min-h-[90px]`}>
-                <div className="flex items-center justify-between">
-                  <span className={labelCls}>{afterTomorrowLabel}</span>
-                  <div className="bg-white/5 rounded-xl p-1.5">{getWeatherIcon(weather.afterTomorrow.weatherCode, true, "w-5 h-5")}</div>
-                </div>
-                <div className="text-2xl md:text-3xl font-black tabular-nums leading-none">{Math.round(weather.afterTomorrow.maxTemp)}°</div>
               </div>
 
               {/* AI komentár (celá šírka) */}
