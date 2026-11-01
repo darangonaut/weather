@@ -3,14 +3,17 @@
 # Weather je STATIC export + PHP endpointy — NIKDY nebuilduj na serveri (1GB RAM).
 # Build beží lokálne, na server sa rsyncne len `out/` (statika) a `php/` (API endpointy).
 # Jednorazový setup (fpm pool weather, nginx vhost, certbot) je už hotový; node weather.service je disabled.
-# Použitie: ./deploy.sh
+# Použitie: ./deploy.sh — server a kľúč berie z .deploy.env (nie je v gite), napr.:
+#   HOST=user@server
+#   KEY=~/.ssh/kluc
 set -euo pipefail
 
-KEY="${KEY:-$HOME/.ssh/id_ed25519}"
-HOST="${HOST:-ubuntu@your-server}"
-BASE="/var/www/weather"
-
 cd "$(dirname "$0")"
+
+[ -f .deploy.env ] && source .deploy.env
+: "${HOST:?Chýba HOST — nastav ho v .deploy.env}"
+: "${KEY:?Chýba KEY — nastav ho v .deploy.env}"
+BASE="/var/www/weather"
 
 echo "→ static build lokálne (next build → out/)"
 npm run build

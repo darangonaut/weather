@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# lokálne nastavenie nasadenia (server, kľúč)
+.deploy.env
